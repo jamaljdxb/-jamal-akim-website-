@@ -1,4 +1,4 @@
-# Jamal Akim — Website
+# Jamal Akim — Website - now live
 
 Built with Astro for speed and SEO, ready to deploy on Cloudflare Pages.
 
