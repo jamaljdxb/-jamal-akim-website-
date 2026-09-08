@@ -1,0 +1,56 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// Add real videos here once the channel is live.
+// youtubeId: the part after "v=" in a YouTube URL. Leave empty for a "coming soon" placeholder.
+const videos = [
+  { title: 'Why I moved from sales into Dubai property', youtubeId: '', category: 'Grow' },
+  { title: 'Walking Dubai Marina: what tenants actually want', youtubeId: '', category: 'Build' },
+  { title: 'Off-plan vs ready: how I decide', youtubeId: '', category: 'Build' },
+  { title: 'A conversation on building in Dubai as an outsider', youtubeId: '', category: 'Connect' },
+];
+---
+<BaseLayout
+  title="Videos & Conversations"
+  description="Video content from Jamal Akim — property breakdowns, founder conversations, and lessons from building in Dubai."
+  canonicalPath="/videos"
+>
+  <section class="article-header wrap">
+    <div class="card-eyebrow">Videos</div>
+    <h1>On camera</h1>
+    <p class="article-meta">Property breakdowns, conversations, and the occasional unfiltered lesson</p>
+  </section>
+
+  <section class="wrap">
+    <div class="video-grid">
+      {videos.map((video) => (
+        <div class="video-card">
+          {video.youtubeId ? (
+            <a href={`https://www.youtube.com/watch?v=${video.youtubeId}`} target="_blank" rel="noopener" class="video-thumb" style={`background-image:url(https://i.ytimg.com/vi/${video.youtubeId}/hqdefault.jpg)`}>
+              <span class="play-btn" aria-hidden="true">▶</span>
+            </a>
+          ) : (
+            <div class="video-thumb video-thumb-placeholder">
+              <span class="play-btn" aria-hidden="true">▶</span>
+              <span class="coming-soon">Coming soon</span>
+            </div>
+          )}
+          <div class="video-card-body">
+            <div class="card-eyebrow">{video.category}</div>
+            <h3>{video.title}</h3>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="section-dark">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Subscribe for the full series</h2>
+        <p>New videos go up as they're filmed — the full catalogue lives on YouTube.</p>
+      </div>
+      <a href="https://youtube.com/" target="_blank" rel="noopener" class="btn-primary">Watch on YouTube ↗</a>
+    </div>
+  </section>
+</BaseLayout>

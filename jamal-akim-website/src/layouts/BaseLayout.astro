@@ -1,0 +1,72 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath?: string; // e.g. "/areas/dubai-marina"
+}
+
+const { title, description, canonicalPath = '' } = Astro.props;
+const siteName = 'Jamal Akim';
+const fullTitle = title === siteName ? title : `${title} | ${siteName}`;
+const canonicalURL = new URL(canonicalPath, Astro.site);
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{fullTitle}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonicalURL} />
+
+  <!-- Open Graph / social sharing -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content={fullTitle} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonicalURL} />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,340;9..144,480;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-name">Jamal Akim</a>
+      <nav class="nav-links">
+        <a href="/journey">Journey</a>
+        <a href="/projects">Projects</a>
+        <a href="/areas">Areas</a>
+        <a href="/videos">Videos</a>
+        <a href="/blog">Insights</a>
+      </nav>
+      <a href="#contact-whatsapp" class="nav-cta">Get in touch</a>
+    </div>
+  </header>
+
+  <main>
+    <slot />
+  </main>
+
+  <section id="contact-whatsapp" class="wrap">
+    <footer class="site-footer">
+      <span>© {new Date().getFullYear()} Jamal Akim</span>
+      <span>
+        <a href="https://wa.me/00000000000" target="_blank" rel="noopener">WhatsApp</a> ·
+        <a href="https://instagram.com/" target="_blank" rel="noopener">Instagram</a> ·
+        <a href="https://linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
+      </span>
+    </footer>
+  </section>
+
+  <div class="sticky-cta">
+    <strong>Jamal Akim</strong>
+    <a href="https://wa.me/00000000000" target="_blank" rel="noopener">Message ↗</a>
+  </div>
+</body>
+</html>

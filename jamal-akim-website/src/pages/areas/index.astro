@@ -1,0 +1,33 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const areas = (await getCollection('areas')).sort(
+  (a, b) => a.data.area.localeCompare(b.data.area)
+);
+---
+<BaseLayout
+  title="Dubai Property by Area"
+  description="A guide to buying and investing in Dubai property, broken down by neighbourhood — pricing, yields and who each area suits."
+  canonicalPath="/areas"
+>
+  <section class="article-header wrap">
+    <div class="card-eyebrow">Areas</div>
+    <h1>Dubai property, by area</h1>
+    <p class="article-meta">Updated as new areas are added</p>
+  </section>
+
+  <section class="wrap">
+    <div class="card-list">
+      {areas.map((entry) => (
+        <div class="card-row">
+          <div class="card-eyebrow">{entry.data.area}</div>
+          <div>
+            <h3><a class="card-title-link" href={`/areas/${entry.id}`}>{entry.data.title}</a></h3>
+            <p>{entry.data.summary}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

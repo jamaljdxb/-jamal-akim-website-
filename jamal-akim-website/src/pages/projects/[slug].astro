@@ -1,0 +1,59 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+interface Props {
+  entry: CollectionEntry<'projects'>;
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const { title, developer, area, startingPrice, handover, paymentPlan, metaDescription, highlights, publishDate } = entry.data;
+---
+<BaseLayout
+  title={title}
+  description={metaDescription}
+  canonicalPath={`/projects/${entry.id}`}
+>
+  <div class="project-hero" aria-hidden="true"></div>
+
+  <section class="article-header wrap">
+    <div class="card-eyebrow">{area} · Off-plan</div>
+    <h1>{title}</h1>
+    <p class="article-meta">
+      By {developer} · Published {publishDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
+    </p>
+  </section>
+
+  <section class="wrap">
+    <div class="spec-strip">
+      <div><span class="spec-label">Starting from</span><span class="spec-value">{startingPrice}</span></div>
+      <div><span class="spec-label">Handover</span><span class="spec-value">{handover}</span></div>
+      {paymentPlan && <div><span class="spec-label">Payment plan</span><span class="spec-value">{paymentPlan}</span></div>}
+    </div>
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    {highlights.length > 0 && (
+      <ul class="highlight-list">
+        {highlights.map((point: string) => <li>{point}</li>)}
+      </ul>
+    )}
+
+    <p style="margin-top: 28px;">
+      <a href="https://wa.me/00000000000" target="_blank" rel="noopener" class="btn-dark">
+        Ask about {title} ↗
+      </a>
+    </p>
+  </section>
+</BaseLayout>

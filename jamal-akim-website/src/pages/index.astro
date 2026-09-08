@@ -1,0 +1,196 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const featuredProjects = (await getCollection('projects', ({ data }) => data.featured)).slice(0, 2);
+---
+<BaseLayout
+  title="Jamal Akim"
+  description="Jamal Akim is a Dubai-based entrepreneur working across property, ventures and media — documenting the journey, not just the finished chapters."
+>
+  <section class="hero">
+    <div class="grid-lines" aria-hidden="true"></div>
+    <div class="wrap">
+      <div class="eyebrow-mark"><span class="dot"></span>London → Dubai</div>
+      <h1 class="hero-title">Always evolving.</h1>
+      <p class="hero-sub">I'm Jamal Akim — an entrepreneur based in Dubai, working across <b>property</b>, <b>ventures</b> and <b>media</b>. This is where I document what I'm building, not just what I've finished.</p>
+      <div class="hero-actions">
+        <a href="#contact-whatsapp" class="btn-primary">Start a conversation ↗</a>
+        <a href="/journey" class="btn-ghost">See the journey</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="pillar-row">
+        <div class="pillar">
+          <div class="pillar-tag">Build</div>
+          <h3>Property & ventures</h3>
+          <p>Dubai real estate, UK property, and the businesses I'm developing alongside them.</p>
+        </div>
+        <div class="pillar">
+          <div class="pillar-tag">Grow</div>
+          <h3>Leadership & discipline</h3>
+          <p>Lessons from sales floors, teams and mistakes — shared as I learn them, not after the fact.</p>
+        </div>
+        <div class="pillar">
+          <div class="pillar-tag">Connect</div>
+          <h3>Conversations & media</h3>
+          <p>Podcasts, interviews and content built around real people and real decisions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-dim">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Property in Dubai, by area</h2>
+        <p>A closer look at the neighbourhoods I work in most, for anyone exploring where to invest.</p>
+      </div>
+      <div class="card-list">
+        <div class="card-row">
+          <div class="card-eyebrow">Marina</div>
+          <div>
+            <h3><a class="card-title-link" href="/areas/dubai-marina">Property in Dubai Marina</a></h3>
+            <p>Waterfront living, strong rental demand, and what to know before buying here.</p>
+          </div>
+        </div>
+        <div class="card-row">
+          <div class="card-eyebrow">Downtown</div>
+          <div>
+            <h3><a class="card-title-link" href="/areas/downtown-dubai">Property in Downtown Dubai</a></h3>
+            <p>The city's centre — Burj Khalifa views, premium pricing, and steady long-term demand.</p>
+          </div>
+        </div>
+        <div class="card-row">
+          <div class="card-eyebrow">JVC</div>
+          <div>
+            <h3><a class="card-title-link" href="/areas/jumeirah-village-circle">Property in Jumeirah Village Circle</a></h3>
+            <p>The value play for first-time Dubai investors — what the numbers actually look like.</p>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top:20px;"><a href="/areas" class="btn-outline">See all areas</a></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Off-plan opportunities</h2>
+        <p>Curated projects worth a serious look — not everything on the market, just what I'd actually put in front of an investor.</p>
+      </div>
+      <div class="projects-grid">
+        {featuredProjects.map((entry) => (
+          <a class="project-card" href={`/projects/${entry.id}`}>
+            <div class="project-image" aria-hidden="true"></div>
+            <div class="project-card-body">
+              <div class="card-eyebrow">{entry.data.area}</div>
+              <h3>{entry.data.title}</h3>
+              <p>{entry.data.summary}</p>
+              <div class="project-specs">
+                <span>{entry.data.startingPrice}</span>
+                <span>Handover {entry.data.handover}</span>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+      <p style="margin-top:20px;"><a href="/projects" class="btn-outline">See all projects</a></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <h2>The route here wasn't straight — that's the point</h2>
+        <p>A short version of a longer story. Some of it worked. Some of it didn't. All of it's still moving.</p>
+      </div>
+      <div class="timeline">
+        <div class="t-item">
+          <div class="t-year">London</div>
+          <h4>Where it started</h4>
+          <p>Raised in London, Jamaican and Saint Lucian roots — early lessons in discipline and standards.</p>
+        </div>
+        <div class="t-item">
+          <div class="t-year">Military</div>
+          <h4>Structure first</h4>
+          <p>Training that shaped how I think about pressure, standards and getting things done.</p>
+        </div>
+        <div class="t-item">
+          <div class="t-year">Sales & financial services</div>
+          <h4>Learning to sell, learning to lead</h4>
+          <p>Time in recruitment, sales and financial services — where client acquisition and negotiation became second nature.</p>
+        </div>
+        <div class="t-item">
+          <div class="t-year">Dubai</div>
+          <h4>A new market</h4>
+          <p>The move to Dubai and into property — real estate, investor relationships, and a different pace of business.</p>
+        </div>
+        <div class="t-item current">
+          <div class="t-year">Now</div>
+          <h4>Entrepreneurship & media</h4>
+          <p>Building ventures beyond property, and starting to document the process publicly through conversations and content.</p>
+        </div>
+      </div>
+      <p style="margin-top:24px;"><a href="/journey" class="btn-outline">Read the full journey</a></p>
+    </div>
+  </section>
+
+  <section class="section-dark">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>On camera</h2>
+        <p>Property breakdowns, founder conversations, and lessons from building in Dubai — filmed, not just written.</p>
+      </div>
+      <div class="video-grid">
+        <div class="video-card">
+          <div class="video-thumb video-thumb-placeholder"><span class="play-btn" aria-hidden="true">▶</span><span class="coming-soon">Coming soon</span></div>
+          <div class="video-card-body"><div class="card-eyebrow">Build</div><h3>Off-plan vs ready: how I decide</h3></div>
+        </div>
+        <div class="video-card">
+          <div class="video-thumb video-thumb-placeholder"><span class="play-btn" aria-hidden="true">▶</span><span class="coming-soon">Coming soon</span></div>
+          <div class="video-card-body"><div class="card-eyebrow">Grow</div><h3>Why I moved from sales into property</h3></div>
+        </div>
+        <div class="video-card">
+          <div class="video-thumb video-thumb-placeholder"><span class="play-btn" aria-hidden="true">▶</span><span class="coming-soon">Coming soon</span></div>
+          <div class="video-card-body"><div class="card-eyebrow">Connect</div><h3>Building in Dubai as an outsider</h3></div>
+        </div>
+      </div>
+      <p style="margin-top:24px;"><a href="/videos" class="btn-ghost">See all videos</a></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Recent insights</h2>
+        <p>Thinking on property, growth and building, published regularly.</p>
+      </div>
+      <div class="card-list">
+        <div class="card-row">
+          <div class="card-eyebrow">Build</div>
+          <div>
+            <h3><a class="card-title-link" href="/blog">Visit the blog</a></h3>
+            <p>New articles are added as they're published — check back or follow along on Instagram/LinkedIn.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact-hero" class="section-dark">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Let's talk</h2>
+        <p>Property, a venture idea, a conversation for the podcast, or just to connect — WhatsApp is the fastest way to reach me.</p>
+      </div>
+      <div class="hero-actions">
+        <a href="https://wa.me/00000000000" target="_blank" rel="noopener" class="btn-primary">Message on WhatsApp ↗</a>
+        <a href="https://linkedin.com/" target="_blank" rel="noopener" class="btn-ghost">Connect on LinkedIn</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

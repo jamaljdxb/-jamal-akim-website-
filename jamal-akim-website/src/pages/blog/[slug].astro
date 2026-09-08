@@ -1,0 +1,43 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  return posts.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+interface Props {
+  entry: CollectionEntry<'blog'>;
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const { title, category, metaDescription, publishDate, updatedDate } = entry.data;
+---
+<BaseLayout
+  title={title}
+  description={metaDescription}
+  canonicalPath={`/blog/${entry.id}`}
+>
+  <section class="article-header wrap">
+    <div class="card-eyebrow">{category}</div>
+    <h1>{title}</h1>
+    <p class="article-meta">
+      Published {publishDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
+      {updatedDate && ` · Updated ${updatedDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}`}
+    </p>
+  </section>
+
+  <section class="wrap">
+    <div class="prose">
+      <Content />
+    </div>
+    <p style="margin-top: 28px;">
+      <a href="/blog" class="btn-outline">← Back to all insights</a>
+    </p>
+  </section>
+</BaseLayout>

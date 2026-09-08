@@ -1,0 +1,55 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const areas = await getCollection('areas');
+  return areas.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+interface Props {
+  entry: CollectionEntry<'areas'>;
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const { title, area, metaDescription, highlights, publishDate, updatedDate } = entry.data;
+---
+<BaseLayout
+  title={title}
+  description={metaDescription}
+  canonicalPath={`/areas/${entry.id}`}
+>
+  <section class="article-header wrap">
+    <div class="card-eyebrow">{area}</div>
+    <h1>{title}</h1>
+    <p class="article-meta">
+      Published {publishDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
+      {updatedDate && ` · Updated ${updatedDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}`}
+    </p>
+  </section>
+
+  <section class="wrap">
+    <div class="prose">
+      <Content />
+    </div>
+
+    {highlights.length > 0 && (
+      <>
+        <h2 style="font-family: var(--serif); font-size: 1.3rem; margin: 1.6em 0 0.6em;">Why investors look at {area}</h2>
+        <ul class="highlight-list">
+          {highlights.map((point: string) => <li>{point}</li>)}
+        </ul>
+      </>
+    )}
+
+    <p style="margin-top: 28px;">
+      <a href="https://wa.me/00000000000" target="_blank" rel="noopener" class="btn-dark">
+        Ask about {area} ↗
+      </a>
+    </p>
+  </section>
+</BaseLayout>

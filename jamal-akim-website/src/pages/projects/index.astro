@@ -1,0 +1,48 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const projects = (await getCollection('projects')).sort(
+  (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf()
+);
+---
+<BaseLayout
+  title="Off-Plan Projects"
+  description="Curated off-plan investment opportunities across Dubai — starting prices, payment plans, and handover dates."
+  canonicalPath="/projects"
+>
+  <section class="article-header wrap">
+    <div class="card-eyebrow">Off-plan</div>
+    <h1>Projects worth a serious look</h1>
+    <p class="article-meta">Updated as new opportunities come to market</p>
+  </section>
+
+  <section class="wrap">
+    <div class="projects-grid">
+      {projects.map((entry) => (
+        <a class="project-card" href={`/projects/${entry.id}`}>
+          <div class="project-image" aria-hidden="true"></div>
+          <div class="project-card-body">
+            <div class="card-eyebrow">{entry.data.area}</div>
+            <h3>{entry.data.title}</h3>
+            <p>{entry.data.summary}</p>
+            <div class="project-specs">
+              <span>{entry.data.startingPrice}</span>
+              <span>Handover {entry.data.handover}</span>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="section-dark">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Not sure which project fits?</h2>
+        <p>Every buyer's goal is different — yield, capital growth, or a specific lifestyle. Let's talk through your budget and what actually fits it.</p>
+      </div>
+      <a href="https://wa.me/00000000000" target="_blank" rel="noopener" class="btn-primary">Message on WhatsApp ↗</a>
+    </div>
+  </section>
+</BaseLayout>
