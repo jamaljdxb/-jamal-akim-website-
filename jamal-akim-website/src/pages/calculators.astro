@@ -1,0 +1,232 @@
+---
+  import BaseLayout from '../layouts/BaseLayout.astro';
+---
+  <BaseLayout title="Investment Calculators" description="Rental yield, ROI, off-plan payment plans, mortgage and transaction cost calculators for Dubai property investors." canonicalPath="/calculators">
+
+    <section class="article-header wrap">
+      <div class="card-eyebrow">Tools</div>
+      <h1>Run the numbers</h1>
+    <p class="article-meta">Six calculators I actually use with clients: yield, ROI, off-plan payment plans, mortgage, price comparison and total transaction cost. Indicative figures, not financial advice, confirm final numbers with your bank, the developer, or DLD.</p>
+    </section>
+
+    <section class="wrap calc-grid">
+      <div class="calc-card">
+        <div class="calc-card-head">
+          <h2>Rental yield</h2>
+          <p>Annual income relative to price, always quote the net figure.</p>
+        </div>
+        <div class="calc-fields">
+          <label>Purchase price (AED)<input type="number" id="y_price" value="1200000" oninput="calcYield()"></label>
+          <label>Annual rent (AED)<input type="number" id="y_rent" value="96000" oninput="calcYield()"></label>
+          <label>Service charge (AED/yr)<input type="number" id="y_serv" value="14000" oninput="calcYield()"></label>
+          <label>Maintenance (AED/yr)<input type="number" id="y_maint" value="4000" oninput="calcYield()"></label>
+          <label>Vacancy (months/yr)<input type="number" id="y_vac" value="1" oninput="calcYield()"></label>
+        </div>
+        <div class="calc-out" id="y_out"></div>
+      </div>
+
+      <div class="calc-card">
+        <div class="calc-card-head">
+          <h2>Return on investment</h2>
+        <p>Cash-on-cash return in year one.</p>
+        </div>
+        <div class="calc-fields">
+          <label>Property price (AED)<input type="number" id="r_price" value="1200000" oninput="calcROI()"></label>
+          <label>Down payment (%)<input type="number" id="r_down" value="20" oninput="calcROI()"></label>
+          <label>Closing costs (AED)<input type="number" id="r_close" value="70000" oninput="calcROI()"></label>
+          <label>Annual rent (AED)<input type="number" id="r_rent" value="96000" oninput="calcROI()"></label>
+          <label>Annual expenses (AED)<input type="number" id="r_exp" value="18000" oninput="calcROI()"></label>
+        </div>
+        <div class="calc-out" id="r_out"></div>
+      </div>
+
+      <div class="calc-card">
+        <div class="calc-card-head">
+          <h2>Off-plan payment plan</h2>
+        <p>Turn a developer's percentage plan into real AED.</p>
+      </div>
+      <div class="calc-fields">
+          <label>Unit price (AED)<input type="number" id="op_price" value="1200000" oninput="calcPlan()"></label>
+          <label>Booking (%)<input type="number" id="op_down" value="20" oninput="calcPlan()"></label>
+          <label>During construction (%)<input type="number" id="op_con" value="40" oninput="calcPlan()"></label>
+          <label>On handover (%)<input type="number" id="op_hand" value="30" oninput="calcPlan()"></label>
+          <label>Post-handover (%)<input type="number" id="op_post" value="10" oninput="calcPlan()"></label>
+          <label>Post-handover period (months)<input type="number" id="op_months" value="24" oninput="calcPlan()"></label>
+        </div>
+        <div class="calc-out" id="op_out"></div>
+      </div>
+
+      <div class="calc-card">
+      <div class="calc-card-head">
+        <h2>Price per sq ft, compare</h2>
+        <p>Compare two units apples-to-apples. The cheaper total isn't always the better value.</p>
+        </div>
+        <div class="calc-fields">
+          <label>Unit A price (AED)<input type="number" id="ps_pa" value="950000" oninput="calcPsf()"></label>
+          <label>Unit A size (sq ft)<input type="number" id="ps_sa" value="700" oninput="calcPsf()"></label>
+        <label>Unit B price (AED)<input type="number" id="ps_pb" value="1150000" oninput="calcPsf()"></label>
+        <label>Unit B size (sq ft)<input type="number" id="ps_sb" value="900" oninput="calcPsf()"></label>
+      </div>
+      <div class="calc-out" id="ps_out"></div>
+      </div>
+
+      <div class="calc-card">
+        <div class="calc-card-head">
+          <h2>Mortgage &amp; LTV</h2>
+          <p>Loan, down payment and estimated monthly payment.</p>
+        </div>
+        <div class="calc-fields">
+          <label>Property price (AED)<input type="number" id="m_price" value="1500000" oninput="calcMort()"></label>
+          <label>LTV (%)<input type="number" id="m_ltv" value="80" oninput="calcMort()"></label>
+          <label>Interest rate (% annual)<input type="number" id="m_rate" value="4.5" step="0.1" oninput="calcMort()"></label>
+          <label>Term (years)<input type="number" id="m_term" value="25" oninput="calcMort()"></label>
+        </div>
+        <div class="calc-out" id="m_out"></div>
+      </div>
+
+      <div class="calc-card">
+        <div class="calc-card-head">
+          <h2>Transaction cost estimator</h2>
+        <p>Cash needed on top of the price. Indicative, confirm on DLD.</p>
+        </div>
+        <div class="calc-fields">
+          <label>Purchase price (AED)<input type="number" id="tc_price" value="1500000" oninput="calcTx()"></label>
+          <label>Type
+            <select id="tc_type" onchange="calcTx()">
+              <option value="ready">Ready (secondary)</option>
+              <option value="offplan">Off-plan</option>
+            </select>
+          </label>
+          <label>Financed?
+            <select id="tc_fin" onchange="calcTx()">
+              <option value="no">Cash</option>
+              <option value="yes">Mortgage</option>
+            </select>
+          </label>
+          <label id="tc_loanwrap" style="display:none">Loan amount (AED)<input type="number" id="tc_loan" value="1200000" oninput="calcTx()"></label>
+        </div>
+        <div class="calc-out" id="tc_out"></div>
+      </div>
+    </section>
+
+    <section class="wrap calc-cta">
+      <p>Want a second opinion on the numbers for a specific unit?</p>
+      <a class="btn-dark" href="https://wa.me/971585570911" target="_blank" rel="noopener">Message on WhatsApp</a>
+  </section>
+</BaseLayout>
+
+<style>
+  .article-header{ padding-top:48px; padding-bottom:8px; }
+  .article-header h1{ font-family:var(--serif); font-weight:480; font-size:clamp(2rem,6vw,3rem); margin:10px 0 14px; }
+  .article-meta{ font-size:0.98rem; color:#42454c; max-width:62ch; }
+  .calc-grid{ display:grid; grid-template-columns:1fr; gap:20px; padding-top:24px; padding-bottom:16px; }
+  @media(min-width:760px){ .calc-grid{ grid-template-columns:1fr 1fr; } }
+  .calc-card{ background:var(--paper-dim); border:1px solid var(--line-light); border-radius:4px; padding:24px 24px 22px; }
+  .calc-card-head h2{ font-family:var(--serif); font-weight:480; font-size:1.3rem; color:var(--ink); margin-bottom:4px; }
+  .calc-card-head p{ font-size:0.86rem; color:#5a5d63; margin-bottom:16px; }
+  .calc-fields{ display:flex; flex-direction:column; gap:12px; }
+  .calc-fields label{ display:flex; flex-direction:column; gap:5px; font-size:0.78rem; font-weight:600; color:var(--blueprint); text-transform:uppercase; letter-spacing:0.02em; }
+  .calc-fields input, .calc-fields select{ font-family:var(--sans); font-size:0.95rem; font-weight:400; text-transform:none; letter-spacing:normal; color:var(--ink); background:var(--paper); border:1px solid var(--line-light); border-radius:2px; padding:9px 11px; }
+  .calc-fields input:focus, .calc-fields select:focus{ outline:2px solid var(--blueprint-soft); outline-offset:1px; }
+  .calc-out{ margin-top:16px; padding-top:14px; border-top:1px solid var(--line-light); display:grid; gap:7px; }
+  .calc-out .row{ display:flex; justify-content:space-between; gap:12px; font-size:0.9rem; }
+  .calc-out .row .l{ color:#5a5d63; }
+  .calc-out .row .v{ font-weight:600; color:var(--ink); font-family:var(--sans); }
+  .calc-out .row.big .v{ font-family:var(--serif); font-size:1.25rem; color:var(--brass); font-weight:600; }
+  .calc-out .row.warn .v{ color:#a84c4c; }
+    .calc-cta{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; padding:36px 24px; margin-top:8px; margin-bottom:48px; background:var(--ink); color:var(--paper); border-radius:4px; }
+  .calc-cta p{ font-family:var(--serif); font-size:1.15rem; margin:0; }
+</style>
+
+  <script is:inline>
+  function fmt(n){ if(!isFinite(n)) return '-'; return 'AED ' + Math.round(n).toLocaleString('en-US'); }
+  function pct(n){ if(!isFinite(n)) return '-'; return n.toFixed(2) + '%'; }
+  function row(label, value, cls){ return '<div class="row ' + (cls||'') + '"><span class="l">' + label + '</span><span class="v">' + value + '</span></div>'; }
+
+      function calcYield(){
+    const price = +document.getElementById('y_price').value || 0;
+    const rent = +document.getElementById('y_rent').value || 0;
+    const serv = +document.getElementById('y_serv').value || 0;
+    const maint = +document.getElementById('y_maint').value || 0;
+    const vac = +document.getElementById('y_vac').value || 0;
+    const vacLoss = rent * (vac/12);
+    const netIncome = rent - serv - maint - vacLoss;
+    const gross = price ? (rent/price*100) : 0;
+    const net = price ? (netIncome/price*100) : 0;
+    document.getElementById('y_out').innerHTML = row('Gross yield', pct(gross)) + row('Net annual income', fmt(netIncome)) + row('Net yield', pct(net), 'big');
+  }
+
+  function calcROI(){
+        const price = +document.getElementById('r_price').value || 0;
+    const downPct = +document.getElementById('r_down').value || 0;
+    const close = +document.getElementById('r_close').value || 0;
+    const rent = +document.getElementById('r_rent').value || 0;
+    const exp = +document.getElementById('r_exp').value || 0;
+    const cashInvested = price * (downPct/100) + close;
+    const netIncome = rent - exp;
+    const roi = cashInvested ? (netIncome/cashInvested*100) : 0;
+    document.getElementById('r_out').innerHTML = row('Cash invested', fmt(cashInvested)) + row('Net annual income', fmt(netIncome)) + row('Cash-on-cash ROI', pct(roi), 'big');
+  }
+
+  function calcPlan(){
+        const price = +document.getElementById('op_price').value || 0;
+    const down = +document.getElementById('op_down').value || 0;
+    const con = +document.getElementById('op_con').value || 0;
+    const hand = +document.getElementById('op_hand').value || 0;
+    const post = +document.getElementById('op_post').value || 0;
+    const months = +document.getElementById('op_months').value || 0;
+    const total = down + con + hand + post;
+    let html = row('Booking (' + down + '%)', fmt(price*down/100)) + row('During construction (' + con + '%)', fmt(price*con/100)) + row('On handover (' + hand + '%)', fmt(price*hand/100));
+    if(post > 0){ html += row('Post-handover (' + post + '%, ' + months + ' mo)', fmt(price*post/100)); }
+    html += row('Total', fmt(price*total/100), 'big');
+    if(Math.round(total) !== 100){ html += row('Check: plan sums to', total + '% (should be 100%)', 'warn'); }
+    document.getElementById('op_out').innerHTML = html;
+  }
+
+  function calcPsf(){
+        const pa = +document.getElementById('ps_pa').value || 0;
+    const sa = +document.getElementById('ps_sa').value || 0;
+    const pb = +document.getElementById('ps_pb').value || 0;
+    const sb = +document.getElementById('ps_sb').value || 0;
+    const psfA = sa ? pa/sa : 0;
+    const psfB = sb ? pb/sb : 0;
+    const better = psfA && psfB ? (psfA < psfB ? 'Unit A' : psfA > psfB ? 'Unit B' : 'Equal') : '-';
+    document.getElementById('ps_out').innerHTML = row('Unit A, AED per sq ft', fmt(psfA)) + row('Unit B, AED per sq ft', fmt(psfB)) + row('Better value per sq ft', better, 'big');
+  }
+
+  function calcMort(){
+        const price = +document.getElementById('m_price').value || 0;
+    const ltv = +document.getElementById('m_ltv').value || 0;
+    const rate = +document.getElementById('m_rate').value || 0;
+    const term = +document.getElementById('m_term').value || 0;
+    const loan = price * (ltv/100);
+    const down = price - loan;
+    const monthlyRate = rate/100/12;
+    const numPayments = term*12;
+    const monthly = monthlyRate && numPayments ? loan * (monthlyRate * Math.pow(1+monthlyRate, numPayments)) / (Math.pow(1+monthlyRate, numPayments) - 1) : (numPayments ? loan/numPayments : 0);
+    const totalPaid = monthly * numPayments;
+    const totalInterest = totalPaid - loan;
+    document.getElementById('m_out').innerHTML = row('Down payment', fmt(down)) + row('Loan amount', fmt(loan)) + row('Est. monthly payment', fmt(monthly), 'big') + row('Total interest over term', fmt(totalInterest));
+  }
+
+  function calcTx(){
+        const price = +document.getElementById('tc_price').value || 0;
+    const type = document.getElementById('tc_type').value;
+    const financed = document.getElementById('tc_fin').value === 'yes';
+    document.getElementById('tc_loanwrap').style.display = financed ? 'flex' : 'none';
+    const loan = financed ? (+document.getElementById('tc_loan').value || 0) : 0;
+    const dldFee = price*0.04 + 580;
+    const agencyFee = type === 'ready' ? price*0.02*1.05 : 0;
+    const mortRegFee = financed ? loan*0.0025 + 290 : 0;
+    const trusteeFee = 4200;
+    const total = dldFee + agencyFee + mortRegFee + trusteeFee;
+    let html = row('DLD transfer fee (4% + AED 580)', fmt(dldFee));
+    if(agencyFee > 0) html += row('Agency commission (2% + VAT)', fmt(agencyFee));
+    if(mortRegFee > 0) html += row('Mortgage registration fee', fmt(mortRegFee));
+    html += row('Trustee office fee (approx.)', fmt(trusteeFee));
+    html += row('Estimated total on top of price', fmt(total), 'big');
+    document.getElementById('tc_out').innerHTML = html;
+}
+
+  calcYield(); calcROI(); calcPlan(); calcPsf(); calcMort(); calcTx();
+</script>
