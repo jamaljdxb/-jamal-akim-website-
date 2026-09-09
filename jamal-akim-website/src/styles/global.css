@@ -1,15 +1,15 @@
 :root{
-  --ink:#12141a;
-  --ink-soft:#1c1f27;
-  --paper:#efeae0;
-  --paper-dim:#e4dfd2;
-  --blueprint:#2c4a66;
-  --blueprint-soft:#4a6b8a;
-  --brass:#c1904f;
-  --line-dark: rgba(239,234,224,0.18);
-  --line-light: rgba(18,20,26,0.14);
-  --serif: 'Fraunces', serif;
-  --sans: 'IBM Plex Sans', sans-serif;
+    --ink:#111111;
+    --ink-soft:#1c1c1c;
+    --paper:#F2EFE9;
+    --paper-dim:#D8D2C8;
+    --blueprint:#111111;
+    --blueprint-soft:#5c5850;
+    --brass:#88755D;
+    --line-dark: rgba(242,239,233,0.18);
+    --line-light: rgba(17,17,17,0.14);
+    --serif: 'DM Serif Display', serif;
+    --sans: 'Inter', sans-serif;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html{scroll-behavior:smooth;}
