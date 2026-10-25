@@ -29,15 +29,98 @@
     "w1": "Saadiyat. The Louvre. The Guggenheim. Zayed National Museum. The Abrahamic Family House. A top twenty beach. A top three hotel, in talks. Then Abu Dhabi. A D G M. BlackRock. Formula One. The Sphere. Disney. Etihad Rail.",
     "w2": "So what if I moved it? The Louvre and a top beach in Hatfield. Prices up? A D G M in Newcastle. What would that show? F1 and the Sphere in Paris. Would the world fly in? A mosque, a church and a synagogue in Madrid. What would it say? BlackRock in California. Would capital follow?",
     "w5": "Follow for part two.",
-    "f": "Follow for more."
+    "f": "Follow for more.",
+    "r0": "I'm right brain. I think in pictures. But numbers? Vital. When people part with real money, they need context. That's my edge.",
+    "r1": "Take Abu Dhabi. Culture. The Louvre. The Guggenheim. Zayed National Museum. Faith. The Abrahamic Family House. A top twenty beach. Global capital. A D G M. BlackRock. J.P. Morgan. Play. Formula One. The Sphere. Disney. And Etihad Rail, connecting it all.",
+    "r2": "Now move it. Ras Al Khaimah. Would money follow? Fujairah. Would money follow? Dubai. Would money follow? Lagos. Panama City. Mexico City. Manila. Sydney. Would money follow?",
+    "r3": "Every time. Fundamentals first. Money follows.",
+    "r4": "The headlines? Crash. Bubble. Slowdown. That's noise. Zoom out. Property is a mid to long hold. Let the fundamentals work.",
+    "r5": "This is generational. You. Your kids. Their kids.",
+    "r6": "Follow the fundamentals.",
+    "r7": "I'm Jamal Akim. Let's talk."
   },
   "cuts": {
-    "main": ["m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10", "m11", "m12", "m13", "m14", "m15"],
-    "story": ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7"],
-    "storyv": ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "f"],
-    "hook": ["m0", "f"],
-    "motivate": ["m14", "f"],
-    "identity": ["m1", "f"],
-    "whatif": ["w0", "w1", "w2", "m9", "m11", "w5"]
-  }
+    "main": [
+      "m0",
+      "m1",
+      "m2",
+      "m3",
+      "m4",
+      "m5",
+      "m6",
+      "m7",
+      "m8",
+      "m9",
+      "m10",
+      "m11",
+      "m12",
+      "m13",
+      "m14",
+      "m15"
+    ],
+    "story": [
+      "s0",
+      "s1",
+      "s2",
+      "s3",
+      "s4",
+      "s5",
+      "s6",
+      "s7"
+    ],
+    "storyv": [
+      "s0",
+      "s1",
+      "s2",
+      "s3",
+      "s4",
+      "s5",
+      "s6",
+      "f"
+    ],
+    "hook": [
+      "m0",
+      "f"
+    ],
+    "motivate": [
+      "m14",
+      "f"
+    ],
+    "identity": [
+      "m1",
+      "f"
+    ],
+    "whatif": [
+      "w0",
+      "w1",
+      "w2",
+      "m9",
+      "m11",
+      "w5"
+    ],
+    "money": [
+      "r0",
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5",
+      "r6",
+      "r7"
+    ],
+    "moneyv": [
+      "r0",
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5",
+      "r6",
+      "r7"
+    ]
+  },
+  "pulse": [
+    "money",
+    "moneyv"
+  ]
 }

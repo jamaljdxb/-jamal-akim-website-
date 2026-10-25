@@ -64,10 +64,11 @@ def music_bed(seconds, path):
 def main():
     global CUTS
     urls = json.load(open(sys.argv[1]))
-    page = 'composer.html'
+    page, pulse = 'composer.html', []
     if '--config' in sys.argv:
         cfg = json.load(open(sys.argv[sys.argv.index('--config') + 1]))
         CUTS, page = cfg['cuts'], cfg.get('page', page)
+        pulse = cfg.get('pulse', [])
     only = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else list(CUTS)
     os.makedirs(OUT, exist_ok=True); os.makedirs(CLIPS, exist_ok=True)
     lengths = {}
@@ -91,6 +92,17 @@ def main():
         total = sum(timing[cut])
         bed = os.path.join(OUT, f'bed-{cut}.wav')
         music_bed(total, bed)
+        if cut in pulse:
+            # soft 120 bpm kick + offbeat hat, faded in and out
+            beat = os.path.join(OUT, f'pulse-{cut}.wav')
+            expr = ('0.55*sin(2*PI*(45+70*exp(-mod(t,0.5)*30))*mod(t,0.5))*exp(-mod(t,0.5)*9)'
+                    '+0.06*(random(0)*2-1)*exp(-mod(t+0.25,0.5)*70)')
+            run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'lavfi', '-i',
+                 f"aevalsrc='{expr}':s=48000:d={total:.3f}",
+                 '-af', f'afade=t=in:d=2,afade=t=out:st={max(total - 3, 0):.3f}:d=3', '-ac', '2', beat])
+            mixed = os.path.join(OUT, f'bedp-{cut}.wav')
+            run(['sox', '-m', '-v', '1', bed, '-v', '0.6', beat, mixed])
+            bed = mixed
         inputs, filters, start = ['-i', bed], ['[0]volume=0.16[m]'], 0.0
         for i, c in enumerate(clips):
             inputs += ['-i', clip(c)]
