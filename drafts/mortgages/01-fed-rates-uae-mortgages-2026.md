@@ -24,6 +24,14 @@ Short answer: yes. Long answer: not as much as the headlines say, not yet, and n
 
 Let me show you.
 
+## Key takeaways
+- The Fed raised rates to 3.75% to 4.00% on 16 September 2026. The UAE Central Bank followed on 17 September, moving its Base Rate to 3.90%.
+- 3-month EIBOR, the benchmark behind most UAE mortgages, rose from about 3.6% in April 2026 to 4.30% by 5 October 2026.
+- Most buyers have not felt it yet. Most Dubai deals are cash, most borrowers are on fixed rates, and some banks still offer fixed rates below EIBOR.
+- On a AED 1.6 million loan, 3.89% versus 5.30% is about AED 1,287 a month, and it cuts borrowing power by about 13%.
+- The biggest impact is on exit prices at completion, when mortgage buyers become the main buyer pool.
+
+
 ## The pipe from Washington to Dubai
 
 The dirham is pegged to the US dollar at **3.6725**. It has been since 1997. To keep that peg, the UAE cannot run its own interest rate policy. When the Fed moves, the Central Bank of the UAE moves with it, usually within a day.
@@ -107,6 +115,23 @@ If rates drift up another point between now and your handover in 2028, your comp
 
 I go deeper on this in [off-plan vs resale: the day-one cash maths](/insights/off-plan-vs-resale-day-one-cash/).
 
+## Who feels a Fed hike the most: Dubai, London or New York?
+Same decision in Washington. Three very different outcomes.
+
+**New York.** Most American homeowners hold 30-year fixed mortgages. When rates rise, existing owners barely feel it. What they do instead is stop moving, because nobody wants to give up a cheap loan. Supply freezes and prices stay sticky.
+
+**London.** The Bank of England sets its own rate. It watches the Fed but it is not tied to it. Most UK mortgages are two to five year fixes, so pain arrives in waves as those fixes end.
+
+**Dubai and Abu Dhabi.** The UAE imports the Fed's decision directly through the dollar peg, usually within 24 hours. But because most buyers pay cash and most borrowers fix for a few years, the impact lands first on variable borrowers and on the budgets of new mortgage buyers.
+
+| City | Rate follows the Fed? | Typical mortgage | Who feels a hike first |
+|---|---|---|---|
+| New York | Yes, it is the Fed | 30-year fixed | New buyers |
+| London | No, Bank of England | 2 to 5 year fixed | Owners as fixes end |
+| Dubai and Abu Dhabi | Yes, via the peg | 1 to 5 year fixed, then EIBOR | Variable borrowers and new buyers |
+
+That is why I watch the Fed more closely than most London agents do. For us, it is not background noise. It is our interest rate.
+
 ## Three ways the next year could go
 
 Nobody knows where rates go next, including the Fed. So I plan with scenarios, not predictions.
@@ -137,6 +162,14 @@ You do not need to pick one. You need a plan that survives all three. That means
 **If you are a non-resident:**
 - Your rates and deposit rules are different. Read my [non-resident mortgage guide](/insights/non-resident-mortgage-dubai-2026/).
 
+## The jargon, in plain English
+- **EIBOR.** The Emirates Interbank Offered Rate, published every business day for 1, 3 and 6 month periods. Most UAE variable mortgages are EIBOR plus a margin.
+- **CBUAE Base Rate.** The rate on the Central Bank's overnight deposit facility. It is anchored to the Fed's interest on reserve balances.
+- **Margin.** The fixed amount the bank adds on top of EIBOR. This is where banks compete.
+- **Reversion rate.** What your mortgage switches to when the fixed period ends, usually EIBOR plus a margin.
+- **Loan-to-value (LTV).** The loan as a share of the property's value.
+- **Debt burden ratio.** Your total monthly debt payments as a share of income. Capped at 50% in the UAE.
+
 ## Where to get your actual numbers
 
 I am a property advisor, not a mortgage adviser. When clients need finance, I introduce them to **GCC Mortgages**, a RERA-registered, DED-licensed Dubai brokerage that compares 18 plus UAE banks, conventional and Islamic. Pre-approval is typically within 24 hours once they have your documents, and their broker fee is paid by the bank, not by you.
@@ -148,5 +181,11 @@ I am a property advisor, not a mortgage adviser. When clients need finance, I in
 Washington has reached Dubai. It arrived quietly, through EIBOR, months before the headline. Cash buyers barely noticed. Variable borrowers already pay more. Fixed borrowers will feel it when their fix ends.
 
 But the real impact is on the exit. Mortgage buyers are the bridge between investors and end users. When rates rise, that bridge gets narrower. Plan for it.
+
+## Sources
+- Federal Reserve, FOMC statement, 16 September 2026, and H.15 selected interest rates.
+- Central Bank of the UAE Base Rate announcements, reported by Gulf News (17 September 2026; earlier hold coverage).
+- 3-month EIBOR fixings and advertised UAE mortgage rates, mortgagecompare.ae and mortgease.ae, September to October 2026.
+- Cash and mortgage share of Dubai sales: Knight Frank via Global Property Guide; D&B Dubai Q1 2026; MIRA March 2026.
 
 <p class="disclaimer">General market commentary, not financial or mortgage advice. Rates and fixings change daily; figures were checked in October 2026 from the Federal Reserve, CBUAE announcements reported by Gulf News, and EIBOR and bank rate data published by UAE mortgage comparison sites. Payment examples are illustrative, use a 25-year term and exclude insurance and fees. I may receive a referral fee from GCC Mortgages if you take a mortgage through them; it does not change what you pay. Financing is arranged and regulated through GCC Mortgages and the lender.</p>

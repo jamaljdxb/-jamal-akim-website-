@@ -28,6 +28,14 @@ Wrong. Cheaper on the sticker is not cheaper in your bank account. And in off-pl
 
 Let me show you, with a real-world style example from Abu Dhabi.
 
+## Key takeaways
+- Resale before completion means refunding what the seller has already paid, plus a premium, fees and agency.
+- In our Abu Dhabi example, resale needs about AED 3.15 million on day one. Developer direct needs about AED 1.1 million.
+- Before completion you sell to investors, who negotiate hard. At completion, mortgage buyers and end users arrive.
+- Developers give you time. Mortgages give end users time. Investors want cash today.
+- Run the day-one cash maths on every deal. The sticker price lies.
+
+
 ## Same unit, three prices
 
 Two years ago, this unit launched at **AED 7.8 million**.
@@ -132,6 +140,31 @@ The Fed raised rates in September 2026 and the UAE followed the next day. On a A
 
 I go through this in [the Fed and Dubai mortgages](/insights/fed-rates-uae-mortgages-2026/). If you are the completion buyer, read [resident mortgages](/insights/resident-mortgage-uae-2026/) or [non-resident mortgages](/insights/non-resident-mortgage-dubai-2026/).
 
+## What happens at completion: the exit, worked through
+Back to our Abu Dhabi unit bought direct at AED 9.25 million.
+
+By handover you have paid 10% on booking and, say, another 30% during construction. That is AED 3.7 million plus the AED 185,000 registration fee, so about **AED 3.885 million in**. The final 60%, AED 5.55 million, is due at handover.
+
+Now you have three choices.
+
+**1. Sell at completion.** If the market values the unit at AED 9.5 million, a mortgage buyer can pay that with a deposit and a bank loan. The developer balance is cleared from the sale. You walk away with roughly AED 250,000 above your price before agency fees, on about AED 3.9 million of cash. That is the illustrative upside. If completion value comes in at AED 9 million, you are selling at a loss. That is the risk.
+
+**2. Hold with a handover mortgage.** Investment property loans for expats often run at around 60% of value. Sixty percent of AED 9.25 million is AED 5.55 million, which happens to match the balance. The catch is that the bank lends on its own valuation, not your price. If it values the unit lower, you fund the gap.
+
+**3. Pay cash and hold.** No interest, full rent, and maximum exposure to one asset.
+
+[CHART: Waterfall of the developer-direct journey: AED 1.11m on day one, AED 2.775m during construction, AED 5.55m at handover, funded by sale, mortgage or cash.]
+
+The lesson is simple. The day-one saving is real, but your plan for the 60% decides whether the deal works.
+
+## The jargon, in plain English
+- **Payment plan.** Instalments to the developer during construction, usually interest free.
+- **Post-handover plan.** Part of the price is paid after you get the keys.
+- **SPA.** The sale and purchase agreement.
+- **Oqood.** Dubai's off-plan registration with the land department.
+- **NOC.** The developer's no objection certificate, needed to resell before completion, often with a fee.
+- **Premium.** What a resale buyer pays the seller above the original price.
+
 ## When resale does make sense
 
 I am not anti-resale. It wins when:
@@ -175,5 +208,9 @@ The cheapest price is not always the cheapest deal. In off-plan, cash today, tim
 Buy where your cash works hardest. Sell where the biggest pool of buyers is waiting. And respect the rate cycle, because it decides how deep that pool is.
 
 If you want me to run this maths on a unit you are looking at, [book a call](/book/). And if you need to know what you can borrow at completion, [get your mortgage options](/mortgages/) through GCC Mortgages.
+
+## Sources
+- Worked example based on typical Abu Dhabi and Dubai off-plan structures; fees from the Abu Dhabi (ADREC) and Dubai (DLD) schedules.
+- Lending to expats on investment property: UAE lender and comparison sites (2026).
 
 <p class="disclaimer">Illustrative example based on typical Abu Dhabi off-plan pricing, fees and payment structures; it is not a specific listing and figures are rounded. Market commentary, not investment or mortgage advice. Fees, payment plans and lending rules vary by project and lender. I may receive a referral fee from GCC Mortgages if you take a mortgage through them; it does not change what you pay.</p>

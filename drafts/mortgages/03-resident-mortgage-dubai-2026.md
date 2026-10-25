@@ -22,6 +22,14 @@ If you live here, you have probably done this maths on a napkin.
 
 Fair question. Sometimes buying is the smartest move you will make in the UAE. Sometimes it is a trap. Here is how to tell the difference.
 
+## Key takeaways
+- Expat residents can borrow up to 80% on a first home up to AED 5 million. Off-plan is capped at 50%.
+- The 50% debt burden cap usually decides your limit, not the bank's minimum salary.
+- If you will stay four to five years or more, buying usually beats renting, even with zero price growth.
+- Fixed offers around 3.75% to 3.89% are still below variable pricing after the September 2026 hike.
+- When your fixed period ends, compare banks. Switching can save around 1% a year.
+
+
 ## What residents can borrow
 
 The Central Bank sets the ceilings. Banks decide how close to go.
@@ -123,6 +131,10 @@ On a AED 2 million purchase with a AED 1.6 million loan in Dubai:
 
 Off-plan bought direct from the developer usually has no agency fee. My full list, with sources, is on the [fees page](/fees/).
 
+## Can a mortgaged home get me the Golden Visa?
+Often, yes. Property valued at AED 2 million or more can qualify for the 10-year Golden Visa, and mortgaged property can count. The exact rules on how much must already be paid and what letter the bank must provide have changed over time, so confirm the current criteria with the Dubai Land Department or ICP before you buy for the visa.
+For many residents, the real benefit is independence. Your residency no longer depends on your employer. If you change jobs, start a business or take a break, your visa stays. That alone changes how a lot of families think about buying.
+
 ## Insurance you will be asked for
 
 Every UAE bank will make two policies a condition of the loan.
@@ -144,6 +156,25 @@ When your fixed period ends, your rate jumps to the bank's reversion rate, EIBOR
 
 On a AED 1.4 million balance, the difference between a reversion rate of EIBOR plus 1.99% and a fresh deal at EIBOR plus 1% is about 1% a year. That is roughly AED 14,000 a year in your pocket for one phone call.
 
+## Self-employed? Here is what changes
+Business owners get mortgages here every day. The bank just needs more proof.
+- **Trading history.** Most banks want at least two years of trading under your licence.
+- **Accounts.** Two years of audited financial statements, plus six to twelve months of business and personal bank statements.
+- **Income.** Banks usually average your income over two years and may count only part of it. Pay yourself a consistent salary in the run-up.
+- **Terms.** Some banks offer slightly lower loan-to-value or slightly higher rates to self-employed borrowers. A broker earns their fee here by knowing which banks like your profile.
+
+## First-time buyer checklist
+1. Check your debt burden: list every loan and card limit.
+2. Close the credit cards you do not use.
+3. Get a pre-approval before you view properties.
+4. Decide how long you will really stay.
+5. Set a budget that includes 5% to 7% in fees.
+6. Compare fixed and variable, including reversion margins.
+7. Ask whether a salary transfer earns a better rate.
+8. Check the service charge history of the building.
+9. Get the property valued before you commit to the price.
+10. Diary your fixed-rate end date the day you sign.
+
 ## Documents for residents
 
 - Passport, visa and Emirates ID
@@ -163,5 +194,10 @@ But do the maths properly. Count every fee, count every debt, stress test the ra
 I introduce clients to **GCC Mortgages**, a RERA-registered, DED-licensed Dubai brokerage that compares 18 plus UAE banks, conventional and Islamic, with pre-approval typically within 24 hours. Their broker fee is paid by the bank, not by you.
 
 [Get my mortgage options](/mortgages/).
+
+## Sources
+- Central Bank of the UAE mortgage limits as summarised by UAE lenders and comparison sites (2026).
+- Advertised rates: mortgagecompare.ae, realestateclubdubai.com (2026).
+- Dubai Land Department fee schedule.
 
 <p class="disclaimer">General information, not mortgage or financial advice. Loan-to-value limits, fees and rates change and vary by bank; figures were checked in October 2026 against Central Bank of the UAE limits as reported by UAE lenders and comparison sites and the DLD fee schedule. Rent vs buy example is illustrative, excludes price growth and uses a 25-year term. I may receive a referral fee from GCC Mortgages if you take a mortgage through them; it does not change what you pay. Financing is arranged and regulated through GCC Mortgages and the lender.</p>

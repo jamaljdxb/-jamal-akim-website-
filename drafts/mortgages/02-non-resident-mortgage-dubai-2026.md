@@ -24,6 +24,14 @@ Here is the conversation I have most with buyers in London, Lagos, Toronto and S
 
 Yes. You can. But the rules are different from the ones residents get, and most of the articles online either oversell it or bury you in jargon. So let me give it to you straight.
 
+## Key takeaways
+- Non-residents can get UAE mortgages. Most banks lend 50% to 60% of the value of a completed property, and some go to 65%.
+- Budget a 40% to 50% deposit, plus roughly 5% to 7% in fees.
+- The 50% debt cap counts every debt you have worldwide, not just in the UAE.
+- Most off-plan buyers use the developer payment plan, then take a handover mortgage at completion.
+- Pre-approval through GCC Mortgages typically takes 24 hours once your documents are in.
+
+
 ## The headline numbers
 
 | | Non-resident (typical) | Resident expat, first home |
@@ -117,6 +125,14 @@ During construction, you are dealing in investor money. At completion, mortgage 
 4. **Final offer.** The bank issues the formal offer letter.
 5. **Transfer.** At the trustee office, the property transfers, the mortgage is registered with the DLD and the keys are yours. You can sign through a power of attorney if you cannot fly in.
 
+## How long does it take?
+From first call to keys, a non-resident purchase of a ready property usually runs four to eight weeks.
+- **Pre-approval:** about 24 hours once your documents are complete.
+- **Offer and MOU:** a few days of negotiation, then a 10% deposit cheque to secure the deal.
+- **Valuation and final offer:** around one to two weeks.
+- **Transfer:** booked at a trustee office once the bank, buyer and seller are ready. A power of attorney means you do not have to fly in.
+The slowest part is almost never Dubai. It is your home bank releasing the funds and the paperwork proving where they came from. Start that on day one.
+
 ## Currency, transfers and rent
 
 Two things non-residents forget until it is too late.
@@ -124,6 +140,21 @@ Two things non-residents forget until it is too late.
 **The exchange rate.** Your loan is in dirhams, and the dirham is pegged to the US dollar. If you earn in pounds, euros, naira or rupees, your real monthly cost moves with your currency against the dollar. A 10% fall in your home currency is a 10% rise in your mortgage, in your money. Some buyers hold a buffer in dollars or dirhams for exactly this reason. Use a regulated FX provider for the deposit too. On a AED 800,000 transfer, a bad bank rate can quietly cost you tens of thousands.
 
 **The rent covers more than you think, but not everything.** If the unit rents for AED 120,000 a year, that is AED 10,000 a month against a AED 7,226 mortgage payment. Good. But take off the service charge, management, a month of vacancy and maintenance, and the surplus shrinks fast. Banks also do not count future rent from the property you are buying as income when they assess you, so you must qualify on what you earn today.
+
+## Non-resident buyers by country: what changes
+The bank's rules are the same for everyone. What changes is the paperwork, the money transfer and the tax at home. Always check the home side with a qualified adviser.
+
+**United Kingdom.** UK credit reports are widely accepted by UAE banks. UK residents are generally taxed on worldwide income, so rent from a Dubai flat usually goes on your UK tax return.
+
+**United States.** US citizens are taxed on worldwide income wherever they live, and foreign bank accounts above set thresholds must be reported. Expect extra paperwork from UAE banks for US persons. It is doable, but start early.
+
+**India.** Remittances for property abroad usually go through the Liberalised Remittance Scheme, which has an annual limit per person, and tax collected at source can apply above certain thresholds. Plan the timing of your payments around those rules.
+
+**Nigeria.** The main challenge is moving funds and proving where they came from. Many buyers pay from domiciliary USD accounts held in Nigeria or abroad. Keep every statement.
+
+**Canada.** Canadian residents are taxed on worldwide income, and foreign property above set thresholds must be reported each year.
+
+**Latin America.** For Brazil, Panama, Venezuela and the Caribbean, see my [Latin America guides](/latin-america/). The dollar peg is often the main reason buyers choose the UAE.
 
 ## Rates for non-residents right now
 
@@ -148,5 +179,10 @@ Property valued at **AED 2 million or more** can qualify you for the 10-year Gol
 I work with **GCC Mortgages**, a RERA-registered, DED-licensed Dubai brokerage that compares 18 plus UAE banks for residents and non-residents. Their broker fee is paid by the bank, not by you.
 
 [Get my mortgage options](/mortgages/). Three quick questions, and an adviser comes back to you with what you can borrow.
+
+## Sources
+- Non-resident lending criteria: mortgease.ae, janushermes.com, realestateclubdubai.com, eastfaceuae.com (2026 guides).
+- GCC Mortgages service terms, as stated on gccmortgages.com and summarised on jamalakim.com/mortgages.
+- Dubai Land Department fee schedule (transfer fee 4%, mortgage registration 0.25% plus AED 290).
 
 <p class="disclaimer">General information, not mortgage or financial advice. Loan-to-value limits, income thresholds, ages and fees vary by bank and change over time; figures were checked in October 2026 from UAE lender and comparison sources and the Dubai Land Department fee schedule. Payment examples are illustrative and exclude insurance. I may receive a referral fee from GCC Mortgages if you take a mortgage through them; it does not change what you pay. Financing is arranged and regulated through GCC Mortgages and the lender.</p>
