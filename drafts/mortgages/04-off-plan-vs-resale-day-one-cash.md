@@ -66,6 +66,25 @@ That is about **AED 2 million less** you need liquid right now, even though the 
 
 What does AED 2 million of free liquidity do for you? It can be a second unit's down payment. It can sit in a deposit earning 4%. It can be your safety buffer if the market wobbles. Liquidity is optionality.
 
+## The same maths in Dubai
+
+Dubai works the same way, with one big difference: the DLD transfer fee is **4%**, not 2%. That makes resale even heavier on day one.
+
+Take a more typical Dubai apartment. Resale at **AED 2.5 million**, with the seller 30% paid in. The developer is selling the same layout in the next phase at **AED 2.8 million**.
+
+| | Resale at AED 2.5m | Developer at AED 2.8m |
+|---|---|---|
+| Paid-in amount refunded to seller (30%) | AED 750,000 | none |
+| Down payment | none | AED 280,000 (10%) |
+| Premium to seller | AED 50,000 | none |
+| DLD fee (4%) | AED 100,000 | AED 112,000 |
+| Agency (2% + VAT) | AED 52,500 | none |
+| **Day-one cash** | **AED 952,500** | **AED 392,000** |
+
+That is about **AED 560,000 less** cash on day one for a unit that costs AED 300,000 more on paper. Some developers also run DLD fee waivers or discounts on launches, which widens the gap further. Always ask.
+
+[CHART: Two bars, Dubai example. Resale AED 952,500 vs developer AED 392,000 day-one cash.]
+
 ## Why resale gets stuck before completion
 
 Here is the part most people miss.
