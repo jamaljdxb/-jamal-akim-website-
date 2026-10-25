@@ -1,6 +1,9 @@
 // Renders composer.html to MP4 frame by frame.
 //   node video/render.cjs <cut> [out.mp4] [--fps 30]
 //   node video/render.cjs <cut> --stills 3,12.5,40   (PNG frames for checking)
+//   node video/render.cjs <cut> --timing durs.json --audio track.wav
+//     durs.json: { "<cut>": [sceneDur, ...] } — stretches scenes to match a voiceover
+//     track.wav: soundtrack muxed in place of silence
 // Cuts: main (16:9 YouTube), hook, motivate, whatif, identity (9:16 Shorts/Reels/TikTok)
 const http = require('http');
 const fs = require('fs');
@@ -13,6 +16,8 @@ const cut = args[0] || 'main';
 const flag = (name, def) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : def; };
 const fps = +flag('--fps', 30);
 const stills = flag('--stills');
+const timing = flag('--timing');
+const audio = flag('--audio');
 const outDir = path.join(__dirname, 'out');
 const out = args[1] && !args[1].startsWith('--') ? args[1] : path.join(outDir, `jamal-akim-${cut}.mp4`);
 
@@ -31,7 +36,8 @@ const server = http.createServer((req, res) => {
   page.on('pageerror', e => console.error('page error:', e.message));
   await page.goto(`http://localhost:${server.address().port}/composer.html`);
   await page.evaluate(() => window.fontsReady);
-  const duration = await page.evaluate(c => window.setup(c), cut);
+  const durs = timing ? JSON.parse(fs.readFileSync(timing, 'utf8'))[cut] : null;
+  const duration = await page.evaluate(([c, d]) => window.setup(c, d), [cut, durs]);
   fs.mkdirSync(outDir, { recursive: true });
 
   if (stills) {
@@ -45,9 +51,9 @@ const server = http.createServer((req, res) => {
     const frames = Math.round(duration * fps);
     const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error',
       '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
-      '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo',
+      ...(audio ? ['-i', audio] : ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo']),
       '-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac', '-shortest', '-movflags', '+faststart', out], { stdio: ['pipe', 'inherit', 'inherit'] });
+      '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', out], { stdio: ['pipe', 'inherit', 'inherit'] });
     const batch = 15;
     for (let f = 0; f < frames; f += batch) {
       const imgs = await page.evaluate(([f0, n, fps]) => {

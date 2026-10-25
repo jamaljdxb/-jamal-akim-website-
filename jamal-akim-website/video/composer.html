@@ -885,7 +885,9 @@ const CUTS = {
   identity: { w: 1080, h: 1920, scenes: () => [Stack(IDENTITY, 13.5, { eyebrow: 'How I’m wired' }), CTA(3, { disclaimer: false })] },
 };
 
-function setup(cut) {
+// durs (optional): per-scene durations, e.g. matched to voiceover clips.
+// Each scene's animation is stretched to fit its new duration.
+function setup(cut, durs) {
   CUT = cut;
   const def = CUTS[cut];
   canvas = document.getElementById('c');
@@ -895,7 +897,11 @@ function setup(cut) {
   s = Math.min(W, H) / 1080;
   SCENES = def.scenes();
   let acc = 0;
-  for (const sc of SCENES) { sc.start = acc; acc += sc.dur; }
+  SCENES.forEach((sc, i) => {
+    sc.base = sc.dur;
+    if (durs && durs[i]) sc.dur = durs[i];
+    sc.start = acc; acc += sc.dur;
+  });
   DURATION = acc;
   return DURATION;
 }
@@ -905,7 +911,7 @@ function renderFrame(T) {
   const sc = SCENES.find(x => T >= x.start && T < x.start + x.dur) || SCENES[SCENES.length - 1];
   const t = T - sc.start;
   ctx.save();
-  sc.draw(t, T);
+  sc.draw(t * sc.base / sc.dur, T);
   ctx.restore();
   // scene transition: quick fade to ink at each boundary
   const edge = Math.min(t, sc.dur - t);

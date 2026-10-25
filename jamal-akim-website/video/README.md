@@ -12,7 +12,9 @@ Motion-graphics videos for YouTube, Instagram and TikTok, built in the site's br
 | `jamal-akim-identity.mp4` | 9:16 | ~16s | Option 1. "That's my edge" |
 | `jamal-akim-hook.mp4` | 9:16 | ~11s | Option 3. Punchy hook ("Try me.") |
 
-The videos are **silent on purpose**. Record your own voice over the top (CapCut, Premiere or the in-app editor) using the script below. On IG and TikTok, add a trending sound from inside the app. The on-screen text already works as captions for people watching with the sound off.
+**Voiced versions** (AI voiceover plus a soft music bed, scenes re-timed to the voice) are rendered by `mix.py` and saved to the Higgsfield library as `jamal-akim-<cut>-voiced.mp4`. The voiced main video runs about 4:17. Lines and timings are in `audio/lines.md` and `audio/timing.json`. To use your own voice instead, record each line in `audio/lines.md` and re-run `mix.py` with your files.
+
+The files in `out/` are the **silent** versions. Record your own voice over the top (CapCut, Premiere or the in-app editor) using the script below. On IG and TikTok, add a trending sound from inside the app. The on-screen text already works as captions for people watching with the sound off.
 
 ## Voiceover script for the main video (read along with the timings)
 
