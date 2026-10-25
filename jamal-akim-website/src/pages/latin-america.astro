@@ -1,0 +1,77 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// Guides in the Latin America to UAE series, pillar first.
+const slugs = [
+  'latin-americans-investing-in-uae-property',
+  'panama-investors-uae-property',
+  'venezuelans-moving-to-uae',
+  'brazilian-investors-dubai-abu-dhabi',
+  'trinidad-guyana-investors-uae',
+];
+const posts = (await getCollection('blog', ({ id, data }) => !data.draft && slugs.includes(id)))
+  .sort((a, b) => slugs.indexOf(a.id) - slugs.indexOf(b.id));
+---
+<BaseLayout
+  title="Latin America to the UAE"
+  description="Jamal Akim connects investors and founders from Latin America and the Caribbean with Dubai and Abu Dhabi. Guides on UAE property, the Golden Visa, the USD peg and relocating."
+  canonicalPath="/latin-america"
+>
+  <section class="article-header wrap">
+    <div class="card-eyebrow">The bridge</div>
+    <h1>Latin America to the UAE</h1>
+    <p class="article-meta">Property, residency and business between two regions that are finally looking at each other</p>
+  </section>
+
+  <section class="wrap">
+    <div class="prose">
+      <p>I'm British, raised in London, based in Dubai. Jamaican by way of Cuba and Panama. Saint Lucian by way of Guyana. My family has always moved along the routes between the Caribbean and Latin America, following the work and the opportunity.</p>
+      <p>Now I'm building a bridge from that world to the UAE. Investors from São Paulo, Panama City, Caracas, Bogotá, Port of Spain and Georgetown are looking at Dubai and Abu Dhabi for the same reasons: a currency pegged to the US dollar, rental yields well above most Western cities, some of the safest streets in the world and a 10-year Golden Visa.</p>
+      <p>I connect them with the right developers, lawyers, bankers and communities here, and I tell them straight when something doesn't make sense.</p>
+    </div>
+  </section>
+
+  <section class="wrap" style="margin-top:36px;">
+    <div class="section-head">
+      <h2>The guides</h2>
+      <p>Long reads, written country by country. The story first, then the numbers.</p>
+    </div>
+    <div class="card-list">
+      {posts.map((post) => (
+        <div class="card-row">
+          <div class="card-eyebrow">{post.data.category}</div>
+          <div>
+            <h3><a class="card-title-link" href={`/blog/${post.id}`}>{post.data.title}</a></h3>
+            <p>{post.data.metaDescription}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="section-dark" style="margin-top:48px;">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>How I help</h2>
+      </div>
+      <div class="bridge-grid">
+        <div>
+          <h3>Buying</h3>
+          <p>An honest shortlist across Dubai and Abu Dhabi, with real numbers on yields, service charges and payment plans.</p>
+        </div>
+        <div>
+          <h3>Relocating</h3>
+          <p>Which visa route fits, which communities suit your family, and who to speak to for schools, banking and setup.</p>
+        </div>
+        <div>
+          <h3>Building</h3>
+          <p>Introductions to company setup, free zones and founders who have already made the move from Latin America.</p>
+        </div>
+      </div>
+      <div class="hero-actions" style="margin-top:28px;">
+        <a href="https://wa.me/971585570911" target="_blank" rel="noopener" class="btn-primary">Message on WhatsApp ↗</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

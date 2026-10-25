@@ -27,6 +27,7 @@ const canonicalURL = new URL(canonicalPath, Astro.site);
   <meta property="og:description" content={description} />
   <meta property="og:url" content={canonicalURL} />
   <meta name="twitter:card" content="summary_large_image" />
+  <slot name="head" />
 
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
@@ -45,6 +46,7 @@ const canonicalURL = new URL(canonicalPath, Astro.site);
         <a href="/videos">Videos</a>
         <a href="/calculators">Calculators</a>
         <a href="/blog">Insights</a>
+        <a href="/latin-america">Latin America</a>
       </nav>
       <a href="#contact-whatsapp" class="nav-cta">Get in touch</a>
     </div>

@@ -29,6 +29,8 @@ const blog = defineCollection({
     publishDate: z.date(),
     updatedDate: z.date().optional(),
     draft: z.boolean().default(false),
+    // Rendered as an FAQ section at the end of the post and as FAQPage structured data.
+    faq: z.array(z.object({ q: z.string(), a: z.string() })).default([]),
   }),
 });
 
