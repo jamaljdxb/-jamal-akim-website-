@@ -1,0 +1,43 @@
+{
+  "page": "studio.html",
+  "lines": {
+    "m0": "I'm dyslexic. Can't spell. But I create. I build. I out-think. Try me.",
+    "m1": "ADHD. Dyslexic. I see things most people don't. Not a weakness. My edge.",
+    "m2": "I'm Jamal Akim. Property. Business. People. This is how I see things.",
+    "m3": "Failed maths. Got an A in finance. Same brain. Different context. Give me a story, and I see it all.",
+    "m4": "My brain runs on context. Story. Visuals. Graphs. Maps.",
+    "m5": "Before the hype, the basics. The water. The rice. The staple. Location. Infrastructure. Scarcity. Get these right. The rest is seasoning.",
+    "m6": "You've seen the news. The content. The numbers. Now see it my way.",
+    "m7": "Saadiyat Island. The Louvre. The Guggenheim. Zayed National Museum. The Abrahamic Family House. A mosque, a church and a synagogue, side by side. The nineteenth best beach in the world. A top three luxury hotel brand, in negotiation. Now zoom out. A D G M. Wall Street, moving in. BlackRock. J.P. Morgan. Family offices. Formula One. The Sphere. A Disney park. And Etihad Rail, connecting it all.",
+    "m8": "So what if I moved it? The Louvre and a top beach, in Hatfield. Prices up? A D G M in Newcastle. What would that show? F1 and the Sphere in Paris. Would the world fly in? A mosque, a church and a synagogue in Madrid. What would it say? BlackRock and J.P. Morgan in California. Would capital follow? All of it, in Bahrain. The whole region?",
+    "m9": "No need to imagine. It's already here.",
+    "m10": "Number nineteen. Best beaches in the world. Crisp blue water. But the others? No museums next door. No cultural district. That's why it's my number one. Mo at Aldar made me see it.",
+    "m11": "Eighteen thousand homes coming. Under eighteen hundred villas and mansions. Premium land. Premium location.",
+    "m12": "Then the developer moved. Aldar. Government backed. They never do this. Fifty fifty. Five percent down. Waiver. Incentives.",
+    "m13": "Real estate is generational. You. Your kids. Their kids.",
+    "m14": "They said disorder. I say advantage. ADHD means... think fast. Build fast. Move fast. Dyslexia means I see the picture. Not just the words. Not broken. Built different.",
+    "m15": "I'm Jamal Akim. Subscribe. Let's talk.",
+    "s0": "Most of the market thinks in spreadsheets. Too much data. Zero decisions.",
+    "s1": "Numbers matter. They're vital. But on their own? Nobody feels them.",
+    "s2": "Left brain. Data. Yields. Spreadsheets. Right brain. Story. Context. Visuals. That's me.",
+    "s3": "Here's the spreadsheet. One bed. Seventy square metres. From two point nine five million. Five percent booking. Now the story. A home on Saadiyat. Museums around you. The sea close by. Five percent to get in. Same facts. One you feel.",
+    "s4": "Trust is good. Paper is better. So the numbers stay. Always.",
+    "s5": "Just a line? Nobody feels it. Same line. Now with the story. The Louvre. The Abrahamic Family House. Zayed National Museum. The Guggenheim, on the way.",
+    "s6": "Data, plus story, equals decision. Numbers tell you what. Story tells you why. I bring both.",
+    "s7": "I'm Jamal Akim. Subscribe for more.",
+    "w0": "What if I moved Abu Dhabi's best address... to your city?",
+    "w1": "Saadiyat. The Louvre. The Guggenheim. Zayed National Museum. The Abrahamic Family House. A top twenty beach. A top three hotel, in talks. Then Abu Dhabi. A D G M. BlackRock. Formula One. The Sphere. Disney. Etihad Rail.",
+    "w2": "So what if I moved it? The Louvre and a top beach in Hatfield. Prices up? A D G M in Newcastle. What would that show? F1 and the Sphere in Paris. Would the world fly in? A mosque, a church and a synagogue in Madrid. What would it say? BlackRock in California. Would capital follow?",
+    "w5": "Follow for part two.",
+    "f": "Follow for more."
+  },
+  "cuts": {
+    "main": ["m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10", "m11", "m12", "m13", "m14", "m15"],
+    "story": ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7"],
+    "storyv": ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "f"],
+    "hook": ["m0", "f"],
+    "motivate": ["m14", "f"],
+    "identity": ["m1", "f"],
+    "whatif": ["w0", "w1", "w2", "m9", "m11", "w5"]
+  }
+}

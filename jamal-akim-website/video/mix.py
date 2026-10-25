@@ -2,6 +2,7 @@
 """Build voiced versions of every cut.
 
   python3 video/mix.py clips.json          # clips.json: {"0": "<wav url>", ...}
+  python3 video/mix.py clips.json --config audio/v2.json   # v2 design: page, lines and cut map
 
 For each cut: times every scene to its voiceover clip (clip + breathing room),
 writes out/timing.json, builds a soft ambient music bed with sox, mixes voice
@@ -61,30 +62,38 @@ def music_bed(seconds, path):
 
 
 def main():
+    global CUTS
     urls = json.load(open(sys.argv[1]))
+    page = 'composer.html'
+    if '--config' in sys.argv:
+        cfg = json.load(open(sys.argv[sys.argv.index('--config') + 1]))
+        CUTS, page = cfg['cuts'], cfg.get('page', page)
+    only = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else list(CUTS)
     os.makedirs(OUT, exist_ok=True); os.makedirs(CLIPS, exist_ok=True)
     lengths = {}
+    clip = lambda k: os.path.join(CLIPS, f'vo-{k}.wav')
     for k, url in urls.items():
-        f = os.path.join(CLIPS, f'vo-{int(k):02d}.wav')
+        f = clip(k)
         if not os.path.exists(f):
             run(['curl', '-sSfL', '-o', f, url])
-        lengths[int(k)] = duration(f)
+        lengths[k] = duration(f)
 
     timing = {}
     for cut, clips in CUTS.items():
-        durs = [lengths[c] + LEAD + TAIL for c in clips]
+        durs = [lengths[str(c)] + LEAD + TAIL for c in clips]
         durs[-1] = max(durs[-1], MIN_END)
         timing[cut] = [round(d, 3) for d in durs]
     tfile = os.path.join(OUT, 'timing.json')
     json.dump(timing, open(tfile, 'w'), indent=1)
 
-    for cut, clips in CUTS.items():
+    for cut in only:
+        clips = CUTS[cut]
         total = sum(timing[cut])
         bed = os.path.join(OUT, f'bed-{cut}.wav')
         music_bed(total, bed)
         inputs, filters, start = ['-i', bed], ['[0]volume=0.16[m]'], 0.0
         for i, c in enumerate(clips):
-            inputs += ['-i', os.path.join(CLIPS, f'vo-{c:02d}.wav')]
+            inputs += ['-i', clip(c)]
             ms = int((start + LEAD) * 1000)
             filters.append(f'[{i + 1}]aresample=48000,pan=stereo|c0=c0|c1=c0,adelay={ms}|{ms}[v{i}]')
             start += timing[cut][i]
@@ -95,7 +104,7 @@ def main():
         run(['ffmpeg', '-y', '-loglevel', 'error', *inputs, '-filter_complex', ';'.join(filters),
              '-map', '[out]', '-t', f'{total:.3f}', '-ar', '48000', track])
         if '--no-render' not in sys.argv:
-            run(['node', os.path.join(HERE, 'render.cjs'), cut, '--timing', tfile, '--audio', track])
+            run(['node', os.path.join(HERE, 'render.cjs'), cut, '--page', page, '--timing', tfile, '--audio', track])
 
 
 if __name__ == '__main__':
