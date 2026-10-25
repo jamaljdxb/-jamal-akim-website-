@@ -1,0 +1,242 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CGT Explainer</title>
+<style>
+  @font-face{font-family:"Inter Tight";src:url(../assets/fonts/inter-tight-latin-800-normal.woff2);font-weight:800}
+  @font-face{font-family:"Inter Tight";src:url(../assets/fonts/inter-tight-latin-700-normal.woff2);font-weight:700}
+  @font-face{font-family:"IBM Plex Mono";src:url(../assets/fonts/ibm-plex-mono-latin-500-normal.woff2);font-weight:500}
+  html,body{margin:0;background:#08090a}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// "UK Capital Gains Tax on property" explainer. Same contract as leverage.html:
+// setup(mode, durations) -> total seconds, renderFrame(t). Illustrated cream "cards" with
+// marker highlights sit inside the brand frame (ink, brass, mono labels, captions).
+const P = { ink: '#08090a', white: '#ffffff', grey: '#9a9ea2', line: '#2a2d31', brass: '#a98a52', brass2: '#c9a96a',
+  card: '#f7f3ea', cardInk: '#141414', green: '#a8dcab', yellow: '#f6dd6a', blue: '#a9d3f5', orange: '#f2b48a', roof: '#1d1d1d', bush: '#5aa04f', chimney: '#a5543a' };
+const VO = [
+  'Sold a UK rental for a hundred thousand pounds profit? HMRC wants its share.',
+  'Here\'s how capital gains tax actually works, in 2026.',
+  'Bought for two hundred thousand. Sold for three hundred thousand. That\'s a one hundred thousand pound gain.',
+  'Take off your costs. Agent and legal fees, stamp duty, improvements. Say fifteen thousand. You\'re at eighty five thousand.',
+  'Take off your three thousand pound allowance. Eighty two thousand is taxable.',
+  'As a higher rate taxpayer, that\'s twenty four percent. Nineteen thousand, six hundred and eighty pounds.',
+  'If you\'re UK resident, you report and pay within sixty days.',
+  'And moving to Dubai doesn\'t make it disappear. Non residents still pay UK tax on UK property, and must report within sixty days, even if nothing is owed.',
+  'Know your number before you sell. Then put the rest to work. The full guide is on jamalakim.com.',
+];
+let c, ctx, W, H, s, mode, D = [], starts = [], TOTAL = 0;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = x => 1 - Math.pow(1 - x, 3);
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const back = x => { const c1 = 1.5, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+
+function font(w, size) { ctx.font = `${w} ${size}px "Inter Tight"`; ctx.letterSpacing = `${-0.025 * size}px`; }
+function mono(size) { ctx.font = `500 ${size}px "IBM Plex Mono"`; ctx.letterSpacing = `${0.1 * size}px`; }
+function text(str, x, y, { size = 80, w = 800, color = P.white, align = 'left', alpha = 1, m = false } = {}) {
+  ctx.save(); m ? mono(size) : font(w, size); ctx.fillStyle = color; ctx.globalAlpha *= alpha; ctx.textAlign = align;
+  ctx.fillText(m ? str.toUpperCase() : str, x, y); ctx.restore();
+}
+function width(str, size, w = 800) { font(w, size); return ctx.measureText(str).width; }
+function rise(str, x, y, size, t, opt = {}) {
+  const p = eo(seg(t, 0, .55));
+  ctx.save(); ctx.beginPath(); ctx.rect(0, y - size * 1.0, W, size * 1.3); ctx.clip();
+  text(str, x, y + (1 - p) * size * 1.1, { size, ...opt }); ctx.restore();
+}
+function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+// a cream card that pops in
+function card(cx, cy, w, h, t, draw, tilt = 0) {
+  const p = clamp(t / .45); if (p <= 0) return;
+  const k = back(p);
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(tilt * Math.PI / 180); ctx.scale(k, k); ctx.globalAlpha *= clamp(p * 2);
+  ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 30 * s; ctx.shadowOffsetY = 10 * s;
+  ctx.fillStyle = P.card; rrect(-w / 2, -h / 2, w, h, 26 * s); ctx.fill(); ctx.shadowColor = 'transparent';
+  draw(-w / 2, -h / 2, w, h); ctx.restore();
+}
+// hand-drawn style marker swash behind text
+function marker(x, y, w, h, color, p) {
+  if (p <= 0) return; ctx.save(); ctx.fillStyle = color; ctx.beginPath();
+  const ww = w * eo(p), j = h * .12;
+  ctx.moveTo(x, y + j); ctx.quadraticCurveTo(x + ww * .5, y - j, x + ww, y + j * .5);
+  ctx.lineTo(x + ww + j, y + h - j); ctx.quadraticCurveTo(x + ww * .5, y + h + j, x - j, y + h - j * .5); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+// a little house illustration, centred at (x, y), size u
+function house(x, y, u, opts = {}) {
+  ctx.save(); ctx.translate(x, y); ctx.lineJoin = 'round'; ctx.lineWidth = u * .05; ctx.strokeStyle = P.cardInk;
+  ctx.fillStyle = P.bush; [[-.48, .42, .2], [-.28, .48, .16], [.3, .46, .2], [.5, .42, .15]].forEach(([bx, by, r]) => { ctx.beginPath(); ctx.arc(bx * u, by * u, r * u, 0, 7); ctx.fill(); });
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(-.36 * u, -.05 * u, .72 * u, .5 * u); ctx.strokeRect(-.36 * u, -.05 * u, .72 * u, .5 * u);
+  ctx.fillStyle = P.chimney; ctx.fillRect(.18 * u, -.42 * u, .1 * u, .2 * u); ctx.strokeRect(.18 * u, -.42 * u, .1 * u, .2 * u);
+  ctx.fillStyle = P.roof; ctx.beginPath(); ctx.moveTo(-.48 * u, .0); ctx.lineTo(0, -.42 * u); ctx.lineTo(.48 * u, 0); ctx.lineTo(.4 * u, .04 * u); ctx.lineTo(0, -.3 * u); ctx.lineTo(-.4 * u, .04 * u); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fff'; [[-.24, .06], [.1, .06]].forEach(([wx, wy]) => { ctx.fillRect(wx * u, wy * u, .14 * u, .12 * u); ctx.strokeRect(wx * u, wy * u, .14 * u, .12 * u); });
+  ctx.fillStyle = P.cardInk; ctx.fillRect(-.05 * u, .22 * u, .1 * u, .23 * u);
+  if (opts.rent) { ctx.fillStyle = P.cardInk; rrect(-.62 * u, -.02 * u, .34 * u, .26 * u, .03 * u); ctx.fill(); ctx.fillRect(-.5 * u, .24 * u, .03 * u, .22 * u);
+    ctx.fillStyle = '#fff'; font(800, .085 * u); ctx.textAlign = 'center'; ctx.fillText('FOR', -.45 * u, .09 * u); ctx.fillText('RENT', -.45 * u, .19 * u); }
+  if (opts.arrow) { ctx.strokeStyle = '#3f9a4a'; ctx.lineWidth = u * .07; ctx.beginPath(); ctx.moveTo(.3 * u, -.1 * u); ctx.lineTo(.7 * u, -.55 * u); ctx.stroke();
+    ctx.fillStyle = '#3f9a4a'; ctx.beginPath(); ctx.moveTo(.78 * u, -.65 * u); ctx.lineTo(.56 * u, -.6 * u); ctx.lineTo(.74 * u, -.42 * u); ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+}
+// a "sum" card: title, a − b, rule, = result on a marker
+function sumCard(cx, cy, w, t, { title, line, result, color, note }) {
+  const h = (note ? 470 : 400) * s;
+  card(cx, cy, w, h, t, (x, y, w2) => {
+    const pad = 46 * s;
+    text(title, x + pad, y + 86 * s, { size: 42 * s, w: 800, color: P.cardInk });
+    text(line, x + pad, y + 170 * s, { size: 54 * s, w: 700, color: P.cardInk, alpha: eo(seg(t, .4, .8)) });
+    ctx.fillStyle = P.cardInk; ctx.globalAlpha = eo(seg(t, .7, 1)); ctx.fillRect(x + pad, y + 205 * s, (w2 - pad * 2) * eo(seg(t, .7, 1.1)), 5 * s); ctx.globalAlpha = 1;
+    const rs = 92 * s, rw = width(result, rs);
+    marker(x + pad - 6 * s, y + 245 * s, rw + 40 * s, 110 * s, color, seg(t, 1.0, 1.5));
+    text(result, x + pad + 14 * s, y + 330 * s, { size: rs, w: 800, color: P.cardInk, alpha: eo(seg(t, 1.1, 1.5)) });
+    if (note) text(note, x + pad, y + 420 * s, { size: 26 * s, m: true, color: '#55585c', alpha: eo(seg(t, 1.5, 1.9)) });
+  });
+}
+
+function setup(m, durs) {
+  mode = m; c = document.getElementById('c');
+  W = c.width = m === 'h' ? 1920 : 1080; H = c.height = m === 'v' ? 1920 : 1080;
+  ctx = c.getContext('2d'); s = Math.min(W, H) / 1080;
+  D = durs && durs.length === VO.length ? durs : VO.map(v => 2.2 + v.split(' ').length * 0.38);
+  starts = []; let acc = 0; for (const d of D) { starts.push(acc); acc += d; } TOTAL = acc;
+  return TOTAL;
+}
+
+function chrome(T, i) {
+  const pad = 64 * s;
+  text('JAMAL AKIM', pad, pad + 20 * s, { size: 22 * s, m: true });
+  text('UK CGT · 2026/27', W - pad, pad + 20 * s, { size: 18 * s, m: true, color: P.grey, align: 'right' });
+  const pw = W - pad * 2, py = H - pad;
+  ctx.fillStyle = P.line; ctx.fillRect(pad, py, pw, 3 * s);
+  ctx.fillStyle = P.brass; ctx.fillRect(pad, py, pw * clamp(T / TOTAL), 3 * s);
+  if (i === VO.length - 1) return;
+  const lt = T - starts[i], cap = VO[i], capSize = (mode === 'h' ? 30 : 32) * s, maxW = W - pad * 2;
+  font(700, capSize); const lines = []; let cur = '';
+  for (const w of cap.split(' ')) { const t2 = cur ? cur + ' ' + w : w; if (ctx.measureText(t2).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t2; }
+  lines.push(cur);
+  const a = eo(seg(lt, .05, .35)) * (1 - seg(lt, D[i] - .25, D[i]));
+  lines.forEach((l, k) => text(l, W / 2, py - 30 * s - (lines.length - 1 - k) * capSize * 1.3, { size: capSize, w: 700, color: P.grey, align: 'center', alpha: a }));
+}
+
+function scene(i, lt) {
+  const pad = 64 * s, cx = W / 2;
+  const cy = mode === 'v' ? H * .44 : H * .46;
+  const cw = Math.min(W - pad * 2, 860 * s);
+  switch (i) {
+    case 0: {
+      const top = mode === 'v' ? H * .32 : H * .34;
+      text('UK property · capital gains tax', pad, top - 60 * s, { size: 24 * s, m: true, color: P.brass2, alpha: eo(seg(lt, 0, .4)) });
+      rise('£100,000', pad, top + 90 * s, (mode === 'h' ? 190 : 170) * s, lt, { color: P.white });
+      rise('profit?', pad, top + 210 * s, 110 * s, lt - .2, { color: P.white });
+      const y = top + 330 * s;
+      card(pad + 330 * s, y + 40 * s, 660 * s, 120 * s, lt - 1.4, (x, yy, w2) => {
+        text('HMRC wants its share.', x + 36 * s, yy + 78 * s, { size: 50 * s, w: 800, color: P.cardInk });
+      }, -2);
+      break;
+    }
+    case 1: {
+      const labels = [['BUY', P.yellow, {}], ['RENT IT OUT', P.blue, { rent: true }], ['VALUE INCREASES', P.green, { arrow: true }]];
+      const vertical = mode === 'v';
+      const n = 3, cwid = vertical ? 620 * s : (W - pad * 2 - 40 * s) / 3, chei = vertical ? 330 * s : 380 * s;
+      labels.forEach(([lab, col, o], k) => {
+        const x = vertical ? cx : pad + cwid / 2 + k * (cwid + 20 * s);
+        const y = vertical ? H * .24 + k * (chei + 40 * s) : cy;
+        card(x, y, cwid, chei, lt - .2 - k * .5, (x0, y0, w2, h2) => {
+          house(0 + x0 + w2 / 2, y0 + h2 * .42, h2 * .55, o);
+          const ls0 = (vertical ? 50 : 40) * s, ls = Math.min(ls0, ls0 * (w2 - 60 * s) / width(lab, ls0)), lw = width(lab, ls);
+          marker(x0 + w2 / 2 - lw / 2 - 20 * s, y0 + h2 * .74, lw + 40 * s, ls * 1.25, col, 1);
+          text(lab, x0 + w2 / 2, y0 + h2 * .74 + ls * 1.0, { size: ls, w: 800, color: P.cardInk, align: 'center' });
+        }, (k - 1) * 1.5);
+      });
+      if (!vertical) text('How CGT works in 2026', pad, H * .2, { size: 30 * s, m: true, color: P.brass2, alpha: eo(seg(lt, 0, .4)) });
+      break;
+    }
+    case 2: sumCard(cx, cy, cw, lt - .2, { title: 'YOUR GAIN', line: '£300,000 − £200,000', result: '= £100,000', color: P.green, note: 'Sold minus bought' }); break;
+    case 3: {
+      sumCard(cx, cy - (mode === 'v' ? 120 : 40) * s, cw, lt - .2, { title: 'GAIN AFTER COSTS', line: '£100,000 − £15,000', result: '= £85,000', color: P.green });
+      const chips = ['Agent & legal fees', 'Stamp duty', 'Improvements'];
+      const vy = mode === 'v' ? cy + 220 * s : H * .82;
+      let x = mode === 'v' ? pad : cx - cw / 2;
+      chips.forEach((ch, k) => {
+        const a = eo(seg(lt, 2 + k * .4, 2.4 + k * .4)), cs = 26 * s, w2 = width(ch, cs, 700) + 44 * s;
+        const yy = mode === 'v' ? vy + k * 84 * s : vy;
+        if (mode === 'v') x = cx - cw / 2;
+        ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = P.brass2; ctx.lineWidth = 2 * s; rrect(x, yy - 44 * s, w2, 62 * s, 31 * s); ctx.stroke();
+        text(ch, x + 22 * s, yy, { size: cs, w: 700, color: P.white }); ctx.restore();
+        if (mode !== 'v') x += w2 + 18 * s;
+      });
+      break;
+    }
+    case 4: sumCard(cx, cy, cw, lt - .2, { title: 'TAXABLE GAIN', line: '£85,000 − £3,000', result: '= £82,000', color: P.green, note: '2026/27 allowance: £3,000 per person' }); break;
+    case 5: {
+      const side = mode === 'h';
+      sumCard(side ? W * .36 : cx, side ? cy : cy - 90 * s, side ? 860 * s : cw, lt - .2, { title: 'TAX TO PAY', line: '£82,000 × 24%', result: '= £19,680', color: P.orange, note: 'Higher-rate taxpayer' });
+      const kx = side ? W * .78 : cx, ky = side ? cy : cy + (mode === 'v' ? 380 : 290) * s;
+      card(kx, ky, (side ? 520 : 600) * s, 150 * s, lt - 2.2, (x, y, w2, h2) => {
+        text('YOU KEEP', x + 34 * s, y + 52 * s, { size: 22 * s, m: true, color: '#55585c' });
+        text('£80,320', x + 34 * s, y + 122 * s, { size: 64 * s, w: 800, color: P.cardInk });
+      }, 2);
+      break;
+    }
+    case 6: {
+      card(cx, cy, Math.min(cw, 640 * s), 520 * s, lt - .2, (x, y, w2, h2) => {
+        ctx.fillStyle = '#c94a3a'; rrect(x, y, w2, 110 * s, 26 * s); ctx.fill(); ctx.fillRect(x, y + 60 * s, w2, 50 * s);
+        text('REPORT & PAY', x + w2 / 2, y + 72 * s, { size: 40 * s, w: 800, color: '#fff', align: 'center' });
+        const p = eo(seg(lt, .6, 1.6)), n = Math.round(60 * p);
+        text(String(n), x + w2 / 2, y + 330 * s, { size: 220 * s, w: 800, color: P.cardInk, align: 'center' });
+        text('days after completion', x + w2 / 2, y + 420 * s, { size: 34 * s, w: 700, color: P.cardInk, align: 'center' });
+        text('UK resident · if tax is due', x + w2 / 2, y + 480 * s, { size: 22 * s, m: true, color: '#55585c', align: 'center' });
+      });
+      break;
+    }
+    case 7: {
+      const side = mode !== 'v', w2 = side ? Math.min((W - pad * 3) / 2, 760 * s) : cw, h2 = 360 * s;
+      const p1 = side ? [W / 2 - w2 / 2 - pad / 2, cy] : [cx, H * .32], p2 = side ? [W / 2 + w2 / 2 + pad / 2, cy] : [cx, H * .32 + h2 + 50 * s];
+      card(p1[0], p1[1], w2, h2, lt - .2, (x, y, ww) => {
+        text('LIVING IN THE UAE', x + 40 * s, y + 70 * s, { size: 24 * s, m: true, color: '#55585c' });
+        text('UAE capital gains tax', x + 40 * s, y + 150 * s, { size: 40 * s, w: 700, color: P.cardInk });
+        marker(x + 34 * s, y + 190 * s, 210 * s, 110 * s, P.green, seg(lt, .8, 1.2));
+        text('0%', x + 50 * s, y + 280 * s, { size: 100 * s, w: 800, color: P.cardInk });
+      }, -1.5);
+      card(p2[0], p2[1], w2, h2, lt - 1.6, (x, y, ww) => {
+        text('YOUR UK PROPERTY', x + 40 * s, y + 70 * s, { size: 24 * s, m: true, color: '#55585c' });
+        const f1 = Math.min(52 * s, 52 * s * (ww - 80 * s) / width('UK CGT: still due', 52 * s));
+        const f2 = Math.min(46 * s, 46 * s * (ww - 110 * s) / width('60-day report: always', 46 * s));
+        text('UK CGT: still due', x + 40 * s, y + 160 * s, { size: f1, w: 800, color: P.cardInk });
+        marker(x + 34 * s, y + 200 * s, width('60-day report: always', f2) + 40 * s, 90 * s, P.orange, seg(lt, 2.4, 2.9));
+        text('60-day report: always', x + 50 * s, y + 262 * s, { size: f2, w: 800, color: P.cardInk });
+      }, 1.5);
+      break;
+    }
+    case 8: {
+      const top = mode === 'v' ? H * .3 : H * .3, sz = (mode === 'h' ? 100 : 92) * s;
+      rise('Know your number', pad, top, sz, lt, { color: P.white });
+      rise('before you sell.', pad, top + sz * 1.05, sz, lt - .3, { color: P.brass2 });
+      rise('Then put the rest to work.', pad, top + sz * 2.2, sz * .55, lt - 1.4, { color: P.grey });
+      const a = eo(seg(lt, 2.6, 3.2)), yb = mode === 'v' ? H * .68 : H * .7;
+      text('Full guide', pad, yb, { size: 24 * s, m: true, color: P.grey, alpha: a });
+      text('jamalakim.com', pad, yb + 70 * s, { size: 64 * s, color: P.white, alpha: a });
+      text('General information · Not tax advice · Speak to a UK tax adviser', pad, yb + 120 * s, { size: 16 * s, m: true, color: P.grey, alpha: a });
+      break;
+    }
+  }
+}
+
+function renderFrame(T) {
+  ctx.fillStyle = P.ink; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.035)'; ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 120 * s) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  let i = starts.findIndex((st, k) => T >= st && T < st + D[k]); if (i < 0) i = VO.length - 1;
+  const lt = T - starts[i];
+  ctx.save(); ctx.globalAlpha = 1 - seg(lt, D[i] - .2, D[i]) * (i < VO.length - 1 ? 1 : 0);
+  scene(i, lt); ctx.restore();
+  const cut = seg(lt, 0, .22); if (i > 0 && cut < 1) { ctx.fillStyle = P.brass; ctx.fillRect(0, 0, W * (1 - eio(cut)), 6 * s); }
+  chrome(T, i);
+}
+window.setup = setup; window.renderFrame = renderFrame;
+window.fontsReady = Promise.all([document.fonts.load('800 40px "Inter Tight"'), document.fonts.load('700 40px "Inter Tight"'), document.fonts.load('500 40px "IBM Plex Mono"')]);
+</script>
+</body>
+</html>
