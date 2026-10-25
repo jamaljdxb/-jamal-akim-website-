@@ -1,0 +1,251 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ADGM Explainer</title>
+<style>
+  @font-face{font-family:"Inter Tight";src:url(../assets/fonts/inter-tight-latin-800-normal.woff2);font-weight:800}
+  @font-face{font-family:"Inter Tight";src:url(../assets/fonts/inter-tight-latin-700-normal.woff2);font-weight:700}
+  @font-face{font-family:"IBM Plex Mono";src:url(../assets/fonts/ibm-plex-mono-latin-500-normal.woff2);font-weight:500}
+  html,body{margin:0;background:#08090a}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// "ADGM 2.0: Al Maryah vs Al Reem" explainer. Same contract as leverage.html:
+// setup(mode, durations) -> total seconds, renderFrame(t). The island map is a schematic, not to scale.
+const P = { ink: '#08090a', ink2: '#141619', white: '#ffffff', grey: '#9a9ea2', line: '#2a2d31', brass: '#a98a52', brass2: '#c9a96a', water: '#0f1316', land: '#1c2024', land2: '#2a2f34' };
+const VO = [
+  'Everyone asks me. Should I buy near ADGM? Wrong question.',
+  'It\'s not one market. It\'s two islands. And two completely different games.',
+  'ADGM added almost five thousand professionals in six months. The workforce is now forty nine thousand, up thirty four percent.',
+  'Aldar and Mubadala are spending over sixty billion dirhams to double the office space on Al Maryah. With three new bridges to Al Reem.',
+  'Al Maryah is the core. Offices, brands, scarcity. Al Reem is the engine. It\'s where the workforce lives.',
+  'Here\'s the twist. Al Maryah, about two thousand dirhams a square foot. Al Reem, about fifteen hundred. Both, around six point eight percent gross.',
+  'Same yield. Different game. On Al Reem you buy more space, so service charges bite harder.',
+  'Want scarcity and a long hold? Al Maryah. Want cash flow and an easier exit? Al Reem. Want both? Own one of each.',
+  'Underwrite the building, not the island. The full breakdown is on jamalakim.com.',
+];
+let c, ctx, W, H, s, mode, D = [], starts = [], TOTAL = 0;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = x => 1 - Math.pow(1 - x, 3);
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+
+function font(w, size) { ctx.font = `${w} ${size}px "Inter Tight"`; ctx.letterSpacing = `${-0.03 * size}px`; }
+function mono(size) { ctx.font = `500 ${size}px "IBM Plex Mono"`; ctx.letterSpacing = `${0.12 * size}px`; }
+function text(str, x, y, { size = 80, w = 800, color = P.white, align = 'left', alpha = 1, m = false } = {}) {
+  ctx.save(); m ? mono(size) : font(w, size); ctx.fillStyle = color; ctx.globalAlpha *= alpha; ctx.textAlign = align;
+  ctx.fillText(m ? str.toUpperCase() : str, x, y); ctx.restore();
+}
+function width(str, size, w = 800) { font(w, size); return ctx.measureText(str).width; }
+function rise(str, x, y, size, t, opt = {}) {
+  const p = eo(seg(t, 0, .55));
+  ctx.save(); ctx.beginPath(); ctx.rect(0, y - size * 1.0, W, size * 1.3); ctx.clip();
+  text(str, x, y + (1 - p) * size * 1.1, { size, ...opt }); ctx.restore();
+}
+const num = n => Math.round(n).toLocaleString('en-US');
+
+// ---- schematic map: Al Maryah (slim, south-west) and Al Reem (larger, north-east) ----
+const MARYAH = [[.08, .62], [.20, .48], [.36, .40], [.50, .38], [.56, .44], [.46, .54], [.30, .62], [.14, .70]];
+const REEM = [[.40, .20], [.62, .10], [.86, .12], [.96, .30], [.90, .50], [.74, .58], [.60, .50], [.52, .34]];
+const BRIDGES = [[[.44, .40], [.53, .33]], [[.52, .45], [.62, .50]], [[.14, .66], [.04, .80]]];
+function poly(pts, box, fill, stroke, p) {
+  if (p <= 0) return;
+  const [bx, by, bw, bh] = box; ctx.save(); ctx.globalAlpha *= clamp(p * 1.5);
+  ctx.beginPath(); pts.forEach(([x, y], k) => { const X = bx + x * bw, Y = by + y * bh; k ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.closePath();
+  ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = stroke; ctx.lineWidth = 2 * s; ctx.stroke(); ctx.restore();
+}
+function map(box, t, { labels = true, bridges = 0, hi = null } = {}) {
+  const [bx, by, bw, bh] = box;
+  ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1;
+  for (let k = 0; k <= 6; k++) { ctx.beginPath(); ctx.moveTo(bx, by + bh * k / 6); ctx.lineTo(bx + bw, by + bh * k / 6); ctx.stroke(); }
+  ctx.restore();
+  poly(REEM, box, hi === 'reem' ? P.land2 : P.land, hi === 'reem' ? P.brass2 : P.line, eo(seg(t, .3, .9)));
+  poly(MARYAH, box, hi === 'maryah' ? P.land2 : P.land, hi === 'maryah' ? P.brass2 : P.line, eo(seg(t, 0, .6)));
+  BRIDGES.forEach(([[x1, y1], [x2, y2]], k) => {
+    const p = clamp(bridges * 3 - k);
+    if (p <= 0) return;
+    ctx.save(); ctx.strokeStyle = P.brass; ctx.lineWidth = 6 * s; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(bx + x1 * bw, by + y1 * bh); ctx.lineTo(bx + (x1 + (x2 - x1) * eo(p)) * bw, by + (y1 + (y2 - y1) * eo(p)) * bh); ctx.stroke(); ctx.restore();
+  });
+  if (labels) {
+    const a = eo(seg(t, .7, 1.2)), ls = 22 * s;
+    text('AL MARYAH', bx + .24 * bw, by + .56 * bh, { size: ls, m: true, color: hi === 'maryah' ? P.brass2 : P.white, alpha: a });
+    text('AL REEM', bx + .66 * bw, by + .32 * bh, { size: ls, m: true, color: hi === 'reem' ? P.brass2 : P.white, alpha: a });
+  }
+  text('Schematic · not to scale', bx + bw, by + bh + 26 * s, { size: 14 * s, m: true, color: P.grey, align: 'right', alpha: .8 });
+}
+function mapBox() {
+  if (mode === 'v') return [64 * s, H * .16, W - 128 * s, W * .78];
+  if (mode === 'h') return [W * .52, H * .18, W * .42, H * .58];
+  return [W * .42, H * .18, W * .52, H * .50];
+}
+
+function setup(m, durs) {
+  mode = m; c = document.getElementById('c');
+  W = c.width = m === 'h' ? 1920 : 1080; H = c.height = m === 'v' ? 1920 : 1080;
+  ctx = c.getContext('2d'); s = Math.min(W, H) / 1080;
+  D = durs && durs.length === VO.length ? durs : VO.map(v => 2.2 + v.split(' ').length * 0.38);
+  starts = []; let acc = 0; for (const d of D) { starts.push(acc); acc += d; } TOTAL = acc;
+  return TOTAL;
+}
+
+function chrome(T, i) {
+  const pad = 64 * s;
+  text('JAMAL AKIM', pad, pad + 20 * s, { size: 22 * s, m: true });
+  text('N 24.5012°  E 54.3897°', W - pad, pad + 20 * s, { size: 18 * s, m: true, color: P.grey, align: 'right' });
+  const pw = W - pad * 2, py = H - pad;
+  ctx.fillStyle = P.line; ctx.fillRect(pad, py, pw, 3 * s);
+  ctx.fillStyle = P.brass; ctx.fillRect(pad, py, pw * clamp(T / TOTAL), 3 * s);
+  if (i === VO.length - 1) return;
+  const lt = T - starts[i], capSize = (mode === 'h' ? 30 : 32) * s, maxW = W - pad * 2;
+  font(700, capSize); const lines = []; let cur = '';
+  for (const w of VO[i].split(' ')) { const t2 = cur ? cur + ' ' + w : w; if (ctx.measureText(t2).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t2; }
+  lines.push(cur);
+  const a = eo(seg(lt, .05, .35)) * (1 - seg(lt, D[i] - .25, D[i]));
+  lines.forEach((l, k) => text(l, W / 2, py - 30 * s - (lines.length - 1 - k) * capSize * 1.3, { size: capSize, w: 700, color: P.grey, align: 'center', alpha: a }));
+}
+
+function scene(i, lt) {
+  const pad = 64 * s, v = mode === 'v';
+  const top = v ? H * .30 : H * .30;
+  const leftW = mode === 'h' ? W * .46 : mode === 'sq' ? W * .40 : W - pad * 2;
+  switch (i) {
+    case 0: {
+      text('Abu Dhabi · ADGM', pad, top - 50 * s, { size: 24 * s, m: true, color: P.brass2, alpha: eo(seg(lt, 0, .4)) });
+      const sz = (mode === 'h' ? 110 : 96) * s;
+      rise('"Should I buy', pad, top + 60 * s, sz, lt);
+      rise('near ADGM?"', pad, top + 60 * s + sz * 1.05, sz, lt - .2);
+      const sp = eo(seg(lt, 1.9, 2.4));
+      if (sp > 0) { ctx.fillStyle = P.brass; ctx.fillRect(pad - 10 * s, top + 60 * s + sz * .65, (width('near ADGM?"', sz) + 20 * s) * sp, 8 * s); }
+      rise('Wrong question.', pad, top + 60 * s + sz * 2.4, sz * .8, lt - 2.4, { color: P.brass2 });
+      break;
+    }
+    case 1: {
+      map(mapBox(), lt, { labels: true });
+      const tx = pad, ty = v ? H * .64 : top + 40 * s, sz = (v ? 96 : mode === 'h' ? 96 : 80) * s;
+      rise('Two islands.', tx, ty, sz, lt - .4);
+      rise('Two games.', tx, ty + sz * 1.05, sz, lt - .7, { color: P.brass2 });
+      break;
+    }
+    case 2: {
+      text('ADGM · H1 2026', pad, top - 50 * s, { size: 24 * s, m: true, color: P.brass2 });
+      const p1 = eo(seg(lt, .3, 2.2)), p2 = eo(seg(lt, 3.2, 5.2));
+      const big = (mode === 'h' ? 170 : 150) * s;
+      text('+' + num(4688 * p1), pad, top + big * .9, { size: big, color: P.white });
+      text('professionals in six months', pad, top + big * .9 + 60 * s, { size: 34 * s, w: 700, color: P.grey });
+      const y2 = top + big * .9 + 60 * s + big * 1.1;
+      if (p2 > 0) {
+        text(num(49027 * p2), pad, y2, { size: big * .8, color: P.brass2 });
+        text('workforce · up 34% in a year', pad, y2 + 56 * s, { size: 34 * s, w: 700, color: P.grey });
+      }
+      break;
+    }
+    case 3: {
+      const sz = (mode === 'h' ? 150 : mode === 'sq' ? 100 : 130) * s;
+      text('Aldar × Mubadala', pad, top - 50 * s, { size: 24 * s, m: true, color: P.brass2 });
+      rise('AED 60BN+', pad, top + sz * .8, sz, lt, { color: P.white });
+      // office bar doubling
+      const bw = Math.min(leftW, 760 * s), by = top + sz * .8 + 70 * s, g = eo(seg(lt, 1.2, 2.6));
+      ctx.fillStyle = P.ink2; ctx.fillRect(pad, by, bw, 40 * s);
+      ctx.fillStyle = P.grey; ctx.fillRect(pad, by, bw * .5, 40 * s);
+      ctx.fillStyle = P.brass; ctx.fillRect(pad + bw * .5, by, bw * .5 * g, 40 * s);
+      text('Grade A office space on Al Maryah: roughly doubled', pad, by + 90 * s, { size: 26 * s, w: 700, color: P.grey, alpha: g });
+      const mb = mode === 'sq' ? [W * .50, H * .50, W * .44, H * .28] : mapBox();
+      if (!v) map(mb, lt + 2, { labels: true, bridges: seg(lt, 3.2, 6) });
+      else map([64 * s, H * .56, W - 128 * s, W * .55], lt + 2, { labels: true, bridges: seg(lt, 3.2, 6) });
+      text('3 new bridges', v ? pad : mb[0], v ? H * .56 + W * .55 + 70 * s : mb[1] - 24 * s, { size: 24 * s, m: true, color: P.brass2, alpha: eo(seg(lt, 3.4, 4)) });
+      break;
+    }
+    case 4: {
+      const half = D[4] * .45, hi = lt < half ? 'maryah' : 'reem';
+      map(mapBox(), 3, { labels: true, bridges: 1, hi });
+      const tx = pad, ty = v ? H * .64 : top + 20 * s, sz = (v ? 92 : 76) * s;
+      if (lt < half) {
+        rise('The core.', tx, ty, sz, lt, { color: P.brass2 });
+        rise('Offices. Brands.', tx, ty + sz * 1.0, sz * .62, lt - .3);
+        rise('Scarcity.', tx, ty + sz * 1.62, sz * .62, lt - .5);
+      } else {
+        const l2 = lt - half;
+        rise('The engine.', tx, ty, sz, l2, { color: P.brass2 });
+        rise('Where the', tx, ty + sz * 1.0, sz * .62, l2 - .3);
+        rise('workforce lives.', tx, ty + sz * 1.62, sz * .62, l2 - .5);
+      }
+      break;
+    }
+    case 5: {
+      text('Average asking price · March 2026', pad, top - 50 * s, { size: 22 * s, m: true, color: P.brass2, alpha: 1 - eo(seg(lt, 4, 4.6)) * (mode === 'h' ? 0 : 1) });
+      const baseY = v ? H * .70 : mode === 'sq' ? H * .74 : H * .78, maxH = v ? 600 * s : mode === 'sq' ? 400 * s : 470 * s, bw = (mode === 'h' ? 260 : 200) * s;
+      const xs = mode === 'h' ? [W * .18, W * .18 + bw + 90 * s] : [pad + 30 * s, pad + 30 * s + bw + 80 * s];
+      [[2043, 'AL MARYAH', 1.0], [1497, 'AL REEM', 2.2]].forEach(([vv, l, t0], k) => {
+        const g = eo(seg(lt, t0, t0 + 1)), h = maxH * vv / 2043 * g;
+        ctx.fillStyle = k ? P.grey : P.brass; ctx.fillRect(xs[k], baseY - h, bw, h);
+        text('AED ' + num(vv * g), xs[k], baseY - h - 22 * s, { size: 40 * s, alpha: g });
+        text(l, xs[k], baseY + 44 * s, { size: 20 * s, m: true, color: P.grey });
+      });
+      const yp = eo(seg(lt, 4.2, 5));
+      if (yp > 0) {
+        const ly = mode === 'h' ? baseY - maxH * 1.12 : baseY - maxH - 80 * s;
+        ctx.save(); ctx.globalAlpha = yp; ctx.setLineDash([12 * s, 10 * s]); ctx.strokeStyle = P.brass2; ctx.lineWidth = 3 * s;
+        ctx.beginPath(); ctx.moveTo(xs[0] - 20 * s, ly); ctx.lineTo(xs[1] + bw + 20 * s, ly); ctx.stroke(); ctx.restore();
+        text('Both ≈ 6.8% gross', mode === 'h' ? W * .58 : xs[0], mode === 'h' ? H * .45 : ly - 22 * s, { size: (mode === 'h' ? 76 : 44) * s, color: P.brass2, alpha: yp });
+      }
+      break;
+    }
+    case 6: {
+      const sz = (mode === 'h' ? 120 : 100) * s;
+      rise('Same yield.', pad, top + sz * .2, sz, lt);
+      rise('Different game.', pad, top + sz * 1.25, sz, lt - .35, { color: P.brass2 });
+      const g = eo(seg(lt, 2.2, 3.2)), y0 = top + sz * 2.2, rw = Math.min(W - pad * 2, 820 * s);
+      [['AL MARYAH', 5.8, P.brass], ['AL REEM', 5.5, P.grey]].forEach(([l, vv, col], k) => {
+        const y = y0 + k * 110 * s;
+        text(l, pad, y, { size: 20 * s, m: true, color: P.grey, alpha: g });
+        ctx.fillStyle = P.ink2; ctx.fillRect(pad, y + 16 * s, rw, 36 * s);
+        ctx.fillStyle = col; ctx.fillRect(pad, y + 16 * s, rw * (vv / 7) * g, 36 * s);
+        text(vv.toFixed(1) + '% after service charge', pad + rw * (vv / 7) * g + 16 * s, y + 46 * s, { size: 26 * s, w: 700, alpha: g });
+      });
+      text('AED 2M on each · illustrative AED 20/sq ft service charge', pad, y0 + 250 * s, { size: 16 * s, m: true, color: P.grey, alpha: g });
+      break;
+    }
+    case 7: {
+      const rows = [['Scarcity + long hold', 'Al Maryah'], ['Cash flow + easy exit', 'Al Reem'], ['Want both?', 'Own one of each']];
+      const rh = (v ? 300 : mode === 'h' ? 200 : 190) * s, sz = (v ? 64 : mode === 'h' ? 56 : 50) * s;
+      rows.forEach(([a, b], k) => {
+        const t0 = lt - k * (D[7] / 3.3);
+        rise(a, pad, top + k * rh, sz * .7, t0, { color: P.grey });
+        rise('→ ' + b, pad, top + k * rh + sz * 1.15, sz * 1.25, t0 - .2, { color: k === 2 ? P.white : P.brass2 });
+      });
+      break;
+    }
+    case 8: {
+      const sz = (mode === 'h' ? 100 : 92) * s;
+      rise('Underwrite', pad, top, sz, lt);
+      rise('the building,', pad, top + sz * 1.05, sz, lt - .25);
+      rise('not the island.', pad, top + sz * 2.1, sz, lt - .5, { color: P.brass2 });
+      const a = eo(seg(lt, 2.4, 3)), yb = H * .70;
+      text('Full breakdown', pad, yb, { size: 24 * s, m: true, color: P.grey, alpha: a });
+      text('jamalakim.com', pad, yb + 70 * s, { size: 64 * s, alpha: a });
+      text('Asking-price data, Bayut, March 2026 · Not investment advice', pad, yb + 120 * s, { size: 16 * s, m: true, color: P.grey, alpha: a });
+      break;
+    }
+  }
+}
+
+function renderFrame(T) {
+  ctx.fillStyle = P.ink; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.035)'; ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 120 * s) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  let i = starts.findIndex((st, k) => T >= st && T < st + D[k]); if (i < 0) i = VO.length - 1;
+  const lt = T - starts[i];
+  ctx.save(); ctx.globalAlpha = 1 - seg(lt, D[i] - .2, D[i]) * (i < VO.length - 1 ? 1 : 0);
+  scene(i, lt); ctx.restore();
+  const cut = seg(lt, 0, .22); if (i > 0 && cut < 1) { ctx.fillStyle = P.brass; ctx.fillRect(0, 0, W * (1 - eio(cut)), 6 * s); }
+  chrome(T, i);
+}
+window.setup = setup; window.renderFrame = renderFrame;
+window.fontsReady = Promise.all([document.fonts.load('800 40px "Inter Tight"'), document.fonts.load('700 40px "Inter Tight"'), document.fonts.load('500 40px "IBM Plex Mono"')]);
+</script>
+</body>
+</html>
