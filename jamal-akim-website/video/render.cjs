@@ -4,6 +4,7 @@
 //   node video/render.cjs <cut> --timing durs.json --audio track.wav
 //     durs.json: { "<cut>": [sceneDur, ...] } — stretches scenes to match a voiceover
 //     track.wav: soundtrack muxed in place of silence
+//   node video/render.cjs <cut> part1.mp4 --range 0,60   (render only seconds 0–60, for parallel renders)
 // Cuts: main (16:9 YouTube), hook, motivate, whatif, identity (9:16 Shorts/Reels/TikTok)
 const http = require('http');
 const fs = require('fs');
@@ -18,6 +19,7 @@ const fps = +flag('--fps', 30);
 const stills = flag('--stills');
 const timing = flag('--timing');
 const audio = flag('--audio');
+const range = flag('--range');
 const outDir = path.join(__dirname, 'out');
 const out = args[1] && !args[1].startsWith('--') ? args[1] : path.join(outDir, `jamal-akim-${cut}.mp4`);
 
@@ -48,14 +50,15 @@ const server = http.createServer((req, res) => {
       console.log(f);
     }
   } else {
-    const frames = Math.round(duration * fps);
+    const [a, b] = range ? range.split(',').map(Number) : [0, duration];
+    const first = Math.round(a * fps), frames = Math.round(Math.min(b, duration) * fps);
     const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error',
       '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
-      ...(audio ? ['-i', audio] : ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo']),
+      ...(audio ? ['-ss', String(first / fps), '-i', audio] : ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo']),
       '-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-pix_fmt', 'yuv420p',
       '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', out], { stdio: ['pipe', 'inherit', 'inherit'] });
     const batch = 15;
-    for (let f = 0; f < frames; f += batch) {
+    for (let f = first; f < frames; f += batch) {
       const imgs = await page.evaluate(([f0, n, fps]) => {
         const c = document.getElementById('c'), r = [];
         for (let i = 0; i < n; i++) { window.renderFrame((f0 + i) / fps); r.push(c.toDataURL('image/jpeg', 0.93)); }
@@ -64,7 +67,7 @@ const server = http.createServer((req, res) => {
       for (const d of imgs) {
         if (!ff.stdin.write(Buffer.from(d.split(',')[1], 'base64'))) await new Promise(r => ff.stdin.once('drain', r));
       }
-      if (f % (fps * 10) < batch) process.stdout.write(`\r${cut}: ${Math.round(100 * f / frames)}%`);
+      if (f % (fps * 10) < batch) process.stdout.write(`\r${cut}: ${Math.round(100 * (f - first) / (frames - first))}%`);
     }
     ff.stdin.end();
     await new Promise(r => ff.on('close', r));
