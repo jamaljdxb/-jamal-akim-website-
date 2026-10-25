@@ -27,6 +27,14 @@ Because that is what you are paying for. Not the logo. Not the lobby. The promis
 
 Abu Dhabi just became one of the biggest branded residence markets on earth. Miami has been one for years. So let me show you what is really going on, where the opportunity is, and where people are going to get burned.
 
+## Key takeaways
+- Abu Dhabi has 31 branded residence projects: 5 completed and 26 in the pipeline, sixth globally (Global Branded Residences, 2026).
+- 92% of Abu Dhabi's pipeline is standalone with no hotel, against 37% globally.
+- Savills puts the average branded premium at about 33%, mostly measured at launch.
+- ADGM's workforce rose 34% and its assets under management 54% in H1 2026, which drives demand on Al Maryah Island.
+- Compared with Miami, Abu Dhabi offers lower entry prices, no annual property tax and a dollar-linked currency.
+
+
 ## The headline: Abu Dhabi is now top six in the world
 
 Global Branded Residences' 2026 report, *The Brand Standard*, puts Abu Dhabi at:
@@ -193,5 +201,14 @@ Abu Dhabi's branded residence boom is real, and Al Maryah Island has the demand 
 The winners will be the brands that actually deliver service, in the buildings ADGM's workforce actually wants to live in. Compared with Miami, Abu Dhabi gives you a lower entry price, no annual property tax and a dollar-linked currency. That is a strong hand. Just play it with data, not with a logo.
 
 Want me to run a branded project through my five-point screen? [WhatsApp me](https://wa.me/971585570911) the name, or [book a call](/book/). If you need finance for the handover payment, [get your mortgage options](/mortgages/).
+
+## Sources
+- Global Branded Residences, The Brand Standard (2026), via Construction Week and MENAFN coverage.
+- Knight Frank branded residences research (Abu Dhabi scheme count).
+- Savills, Branded Residences 2025/26 (average premium).
+- ADGM H1 2026 results announcement.
+- Marriott Q2 2026 results (Marriott Bonvoy membership above 295 million).
+- Ritz-Carlton Residences Al Maryah: SAAS Properties launch details and agency listings.
+- Miami-Dade Property Appraiser 2026 proposed millage comparison; IRS guidance on FIRPTA and US estate tax for non-residents.
 
 <p class="disclaimer">Market commentary, not investment, tax or legal advice. Pipeline figures from Global Branded Residences, The Brand Standard (2026), with Knight Frank counts noted; premium figures from Savills Branded Residences 2025/26; ADGM figures from ADGM's H1 2026 results; project details from developer and agency listings, which vary, so confirm prices, payment plans and handover dates with the developer. Miami tax points are general: millage varies by city and US tax treatment depends on your circumstances, so speak to a US tax adviser. Own vs hotel example is illustrative. I may receive a referral fee from GCC Mortgages if you take a mortgage through them.</p>

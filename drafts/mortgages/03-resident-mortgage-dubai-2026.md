@@ -183,6 +183,13 @@ Business owners get mortgages here every day. The bank just needs more proof.
 - For self-employed: trade licence, two years of audited accounts and company statements
 - Property details: MOU or reservation form
 
+## Mistakes I see residents make
+- **Buying for the visa, not the numbers.** The Golden Visa is a bonus. The property still has to make sense on rent, costs and resale.
+- **Forgetting the service charge.** It can add thousands a year. Check the building's history before you fall in love with the view.
+- **Maxing out the loan.** Just because the bank will lend 80% does not mean you should. Leave room for a rate rise and a quiet month.
+- **Ignoring the fix end date.** The reversion rate is where banks make their money. Diary it and shop around.
+- **Choosing the bank before the broker.** One bank sees one profile. A broker sees 18 plus lenders and knows which one likes yours.
+
 ## My take
 
 Owning in the UAE is no longer just for investors. With 80% finance, a fixed rate and a plan to stay four or five years, many residents are paying a landlord's mortgage for them.

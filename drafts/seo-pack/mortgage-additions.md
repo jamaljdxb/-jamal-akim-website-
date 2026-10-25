@@ -141,6 +141,14 @@ Business owners get mortgages here every day. The bank just needs more proof.
 Often, yes. Property valued at AED 2 million or more can qualify for the 10-year Golden Visa, and mortgaged property can count. The exact rules on how much must already be paid and what letter the bank must provide have changed over time, so confirm the current criteria with the Dubai Land Department or ICP before you buy for the visa.
 For many residents, the real benefit is independence. Your residency no longer depends on your employer. If you change jobs, start a business or take a break, your visa stays. That alone changes how a lot of families think about buying.
 
+### INSERT before "## My take"
+## Mistakes I see residents make
+- **Buying for the visa, not the numbers.** The Golden Visa is a bonus. The property still has to make sense on rent, costs and resale.
+- **Forgetting the service charge.** It can add thousands a year. Check the building's history before you fall in love with the view.
+- **Maxing out the loan.** Just because the bank will lend 80% does not mean you should. Leave room for a rate rise and a quiet month.
+- **Ignoring the fix end date.** The reversion rate is where banks make their money. Diary it and shop around.
+- **Choosing the bank before the broker.** One bank sees one profile. A broker sees 18 plus lenders and knows which one likes yours.
+
 ### APPEND before the disclaimer
 ## Sources
 - Central Bank of the UAE mortgage limits as summarised by UAE lenders and comparison sites (2026).
