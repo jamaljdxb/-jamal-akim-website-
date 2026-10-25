@@ -1,0 +1,224 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Branded Explainer</title>
+<style>
+  @font-face{font-family:"Inter Tight";src:url(../assets/fonts/inter-tight-latin-800-normal.woff2);font-weight:800}
+  @font-face{font-family:"Inter Tight";src:url(../assets/fonts/inter-tight-latin-700-normal.woff2);font-weight:700}
+  @font-face{font-family:"IBM Plex Mono";src:url(../assets/fonts/ibm-plex-mono-latin-500-normal.woff2);font-weight:500}
+  html,body{margin:0;background:#08090a}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<img id="photo" src="jamal-photo.jpg" style="display:none">
+<script>
+// "Abu Dhabi vs Miami branded residences" explainer. Same contract as leverage.html:
+// setup(mode, durations) -> total seconds, renderFrame(t). The end card uses Jamal's own photo.
+const P = { ink: '#08090a', ink2: '#141619', white: '#ffffff', grey: '#9a9ea2', line: '#2a2d31', brass: '#a98a52', brass2: '#c9a96a' };
+const VO = [
+  'A brand on a building is a promise. The only question is, who\'s still keeping it when you sell?',
+  'Abu Dhabi now has thirty one branded residence projects. Sixth in the world.',
+  'But here\'s the catch. Ninety two percent of its pipeline has no hotel attached. Globally, it\'s thirty seven.',
+  'The average branded premium is about thirty three percent. And that\'s mostly measured at launch, not at resale.',
+  'Now compare Miami. A big brand residence in Brickell starts around five million dollars. The Ritz-Carlton on Al Maryah starts around one point one million.',
+  'And Miami charges property tax every single year. On a two million dollar condo, that\'s around three hundred and sixty thousand dollars over ten years. In Abu Dhabi? Zero.',
+  'Before you pay any brand premium, ask five things. Hotel or no hotel? Who operates it? What does the service charge buy? What\'s the resale evidence? And who buys it next?',
+  'Pass all five, and the premium can be worth every dirham. Fail two, and you\'re paying for a logo.',
+  'The full breakdown is on jamalakim.com.',
+];
+let c, ctx, W, H, s, mode, D = [], starts = [], TOTAL = 0, photo;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = x => 1 - Math.pow(1 - x, 3);
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+
+function font(w, size) { ctx.font = `${w} ${size}px "Inter Tight"`; ctx.letterSpacing = `${-0.03 * size}px`; }
+function mono(size) { ctx.font = `500 ${size}px "IBM Plex Mono"`; ctx.letterSpacing = `${0.12 * size}px`; }
+function text(str, x, y, { size = 80, w = 800, color = P.white, align = 'left', alpha = 1, m = false } = {}) {
+  ctx.save(); m ? mono(size) : font(w, size); ctx.fillStyle = color; ctx.globalAlpha *= alpha; ctx.textAlign = align;
+  ctx.fillText(m ? str.toUpperCase() : str, x, y); ctx.restore();
+}
+function width(str, size, w = 800) { font(w, size); return ctx.measureText(str).width; }
+function rise(str, x, y, size, t, opt = {}) {
+  const p = eo(seg(t, 0, .55));
+  ctx.save(); ctx.beginPath(); ctx.rect(0, y - size * 1.0, W, size * 1.3); ctx.clip();
+  text(str, x, y + (1 - p) * size * 1.1, { size, ...opt }); ctx.restore();
+}
+const num = n => Math.round(n).toLocaleString('en-US');
+function donut(cx, cy, r, frac, p, col, label, sub) {
+  ctx.save(); ctx.lineWidth = r * .26; ctx.lineCap = 'butt';
+  ctx.strokeStyle = P.ink2; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = col; ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac * eo(p)); ctx.stroke(); ctx.restore();
+  text(Math.round(frac * 100 * eo(p)) + '%', cx, cy + r * .2, { size: r * .55, align: 'center', color: col === P.brass ? P.brass2 : P.white });
+  text(label, cx, cy + r * 1.55, { size: 22 * s, m: true, align: 'center', color: P.grey });
+  if (sub) text(sub, cx, cy + r * 1.55 + 36 * s, { size: 18 * s, m: true, align: 'center', color: P.grey });
+}
+
+function setup(m, durs) {
+  mode = m; c = document.getElementById('c'); photo = document.getElementById('photo');
+  W = c.width = m === 'h' ? 1920 : 1080; H = c.height = m === 'v' ? 1920 : 1080;
+  ctx = c.getContext('2d'); s = Math.min(W, H) / 1080;
+  D = durs && durs.length === VO.length ? durs : VO.map(v => 2.2 + v.split(' ').length * 0.38);
+  starts = []; let acc = 0; for (const d of D) { starts.push(acc); acc += d; } TOTAL = acc;
+  return TOTAL;
+}
+
+function chrome(T, i) {
+  const pad = 64 * s;
+  text('JAMAL AKIM', pad, pad + 20 * s, { size: 22 * s, m: true });
+  text('ABU DHABI vs MIAMI', W - pad, pad + 20 * s, { size: 18 * s, m: true, color: P.grey, align: 'right' });
+  const pw = W - pad * 2, py = H - pad;
+  ctx.fillStyle = P.line; ctx.fillRect(pad, py, pw, 3 * s);
+  ctx.fillStyle = P.brass; ctx.fillRect(pad, py, pw * clamp(T / TOTAL), 3 * s);
+  if (i === VO.length - 1) return;
+  const lt = T - starts[i], capSize = (mode === 'h' ? 30 : 32) * s, maxW = W - pad * 2;
+  font(700, capSize); const lines = []; let cur = '';
+  for (const w of VO[i].split(' ')) { const t2 = cur ? cur + ' ' + w : w; if (ctx.measureText(t2).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t2; }
+  lines.push(cur);
+  const a = eo(seg(lt, .05, .35)) * (1 - seg(lt, D[i] - .25, D[i]));
+  lines.forEach((l, k) => text(l, W / 2, py - 30 * s - (lines.length - 1 - k) * capSize * 1.3, { size: capSize, w: 700, color: P.grey, align: 'center', alpha: a }));
+}
+
+function scene(i, lt) {
+  const pad = 64 * s, v = mode === 'v', h = mode === 'h';
+  const top = H * .30;
+  switch (i) {
+    case 0: {
+      text('Branded residences', pad, top - 50 * s, { size: 24 * s, m: true, color: P.brass2, alpha: eo(seg(lt, 0, .4)) });
+      const sz = (h ? 120 : 100) * s;
+      rise('A brand on a', pad, top + sz * .6, sz, lt);
+      rise('building is a', pad, top + sz * 1.65, sz, lt - .2);
+      rise('promise.', pad, top + sz * 2.7, sz, lt - .4, { color: P.brass2 });
+      rise('Who keeps it when you sell?', pad, top + sz * 3.6, sz * .42, lt - 2.4, { color: P.grey });
+      break;
+    }
+    case 1: {
+      text('Global Branded Residences · 2026', pad, top - 50 * s, { size: 22 * s, m: true, color: P.brass2 });
+      const big = (h ? 300 : 260) * s, n = Math.round(31 * eo(seg(lt, .2, 1.6)));
+      text(String(n), pad, top + big * .8, { size: big, color: P.white });
+      text('projects in Abu Dhabi', pad, top + big * .8 + 64 * s, { size: 40 * s, w: 700, color: P.grey });
+      rise('#6 in the world', pad, top + big * .8 + 180 * s, 84 * s, lt - 2.2, { color: P.brass2 });
+      break;
+    }
+    case 2: {
+      text('The catch: no hotel attached', pad, top - 50 * s, { size: 22 * s, m: true, color: P.brass2 });
+      const r = (h ? 170 : v ? 190 : 150) * s;
+      const c1 = h ? [W * .30, H * .50] : v ? [W / 2, H * .38] : [W * .28, H * .52];
+      const c2 = h ? [W * .66, H * .50] : v ? [W / 2, H * .66] : [W * .72, H * .52];
+      donut(c1[0], c1[1], r, .92, seg(lt, .8, 2.2), P.brass, 'Abu Dhabi pipeline', 'standalone');
+      donut(c2[0], c2[1], r, .37, seg(lt, 4.2, 5.4), P.grey, 'Global', 'standalone');
+      break;
+    }
+    case 3: {
+      text('Savills · average branded premium', pad, top - 50 * s, { size: 22 * s, m: true, color: P.brass2 });
+      const rows = [['Established cities', 30], ['Global average', 33], ['Resort locations', 39]];
+      const rw = Math.min(W - pad * 2, 900 * s), y0 = top + 60 * s, rh = (v ? 170 : 130) * s;
+      rows.forEach(([l, val], k) => {
+        const g = eo(seg(lt, .4 + k * .5, 1.2 + k * .5)), y = y0 + k * rh;
+        text(l, pad, y, { size: 26 * s, w: 700, color: k === 1 ? P.white : P.grey, alpha: g });
+        ctx.fillStyle = P.ink2; ctx.fillRect(pad, y + 18 * s, rw, 44 * s);
+        ctx.fillStyle = k === 1 ? P.brass : P.grey; ctx.fillRect(pad, y + 18 * s, rw * val / 45 * g, 44 * s);
+        text('~' + val + '%', pad + rw * val / 45 * g + 16 * s, y + 54 * s, { size: 34 * s, alpha: g });
+      });
+      rise('Mostly a launch number.', pad, y0 + 3 * rh + 30 * s, (v ? 64 : 52) * s, lt - 3.4, { color: P.brass2 });
+      rise('Not a resale promise.', pad, y0 + 3 * rh + 30 * s + (v ? 72 : 60) * s, (v ? 64 : 52) * s, lt - 3.7);
+      break;
+    }
+    case 4: {
+      text('Entry price · big-brand residence', pad, top - 50 * s, { size: 22 * s, m: true, color: P.brass2 });
+      const baseY = v ? H * .72 : H * .68, maxH = v ? 760 * s : h ? 420 * s : 380 * s, bw = (h ? 280 : 220) * s;
+      const xs = h ? [W * .20, W * .20 + bw + 120 * s] : [pad + 40 * s, pad + 40 * s + bw + 110 * s];
+      [[5.0, 'MIAMI · BRICKELL', 'St. Regis from ~$5M', P.grey, 1.6], [1.1, 'ABU DHABI · AL MARYAH', 'Ritz-Carlton from ~$1.1M', P.brass, 4.4]].forEach(([val, l, sub, col, t0], k) => {
+        const g = eo(seg(lt, t0, t0 + 1)), hh = maxH * val / 5 * g;
+        ctx.fillStyle = col; ctx.fillRect(xs[k], baseY - hh, bw, hh);
+        text('$' + (val * g).toFixed(1) + 'M', xs[k], baseY - hh - 24 * s, { size: 48 * s, alpha: g, color: k ? P.brass2 : P.white });
+        text(l, xs[k], baseY + 44 * s, { size: 18 * s, m: true, color: P.grey });
+        text(sub, xs[k], baseY + 78 * s, { size: 22 * s, w: 700, color: P.grey, alpha: g });
+      });
+      if (h) text('Not like for like. Compare per sq ft.', W * .62, H * .45, { size: 30 * s, w: 700, color: P.grey, alpha: eo(seg(lt, 5.6, 6.2)) });
+      break;
+    }
+    case 5: {
+      text('Property tax · USD 2M condo · 10 years', pad, top - 50 * s, { size: 22 * s, m: true, color: P.brass2 });
+      const p = eo(seg(lt, 1.6, 5.6)), big = (h ? 170 : 140) * s;
+      text('MIAMI', pad, top + 40 * s, { size: 24 * s, m: true, color: P.grey });
+      text('$' + num(360000 * p), pad, top + 40 * s + big, { size: big, color: P.white });
+      text('~1.8% a year, non-homestead', pad, top + 100 * s + big, { size: 26 * s, w: 700, color: P.grey });
+      const y2 = top + 100 * s + big + (v ? 220 : 130) * s, a = eo(seg(lt, D[5] - 2.6, D[5] - 2));
+      text('ABU DHABI', h ? W * .62 : pad, h ? top + 40 * s : y2, { size: 24 * s, m: true, color: P.grey, alpha: a });
+      text('$0', h ? W * .62 : pad, (h ? top + 40 * s : y2) + big, { size: big, color: P.brass2, alpha: a });
+      break;
+    }
+    case 6: {
+      text('My five-point screen', pad, top - 50 * s, { size: 22 * s, m: true, color: P.brass2 });
+      const items = ['Hotel or no hotel?', 'Who operates it?', 'What does the service charge buy?', 'What is the resale evidence?', 'Who buys it next?'];
+      const rh = (v ? 140 : h ? 92 : 100) * s, sz = (v ? 50 : 40) * s;
+      const starts6 = [1.6, 3.0, 4.6, 6.6, 8.6].map(x => x * D[6] / 11);
+      items.forEach((it, k) => {
+        const a = eo(seg(lt, starts6[k], starts6[k] + .4)), y = top + 20 * s + k * rh;
+        ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = P.brass2; ctx.lineWidth = 3 * s; ctx.strokeRect(pad, y - sz * .8, sz * .9, sz * .9);
+        const tk = seg(lt, starts6[k] + .3, starts6[k] + .7);
+        if (tk > 0) { ctx.beginPath(); ctx.moveTo(pad + sz * .18, y - sz * .38); ctx.lineTo(pad + sz * .38, y - sz * .16); ctx.lineTo(pad + sz * .38 + sz * .4 * eo(tk), y - sz * .16 - sz * .5 * eo(tk)); ctx.stroke(); }
+        ctx.restore();
+        text(String(k + 1).padStart(2, '0'), pad + sz * 1.3, y, { size: 20 * s, m: true, color: P.grey, alpha: a });
+        text(it, pad + sz * 1.3 + 60 * s, y, { size: sz, w: 700, alpha: a });
+      });
+      break;
+    }
+    case 7: {
+      const sz = (h ? 110 : 96) * s;
+      rise('Pass all five:', pad, top + sz * .4, sz * .55, lt, { color: P.grey });
+      rise('worth every dirham.', pad, top + sz * 1.4, sz, lt - .2, { color: P.brass2 });
+      rise('Fail two:', pad, top + sz * 2.6, sz * .55, lt - D[7] * .5, { color: P.grey });
+      rise('you\'re paying for a logo.', pad, top + sz * 3.6, sz * (v ? .78 : .9), lt - D[7] * .5 - .2);
+      break;
+    }
+    case 8: {
+      // end card with Jamal's photo, graded to black and white
+      const pr = photo && photo.naturalWidth ? photo.naturalWidth / photo.naturalHeight : 4 / 3;
+      let px, py, pw, ph;
+      if (v) { pw = W; ph = H * .52; px = 0; py = H * .08; }
+      else if (h) { pw = W * .5; ph = H; px = W * .5; py = 0; }
+      else { pw = W * .5; ph = H; px = W * .5; py = 0; }
+      if (photo && photo.naturalWidth) {
+        ctx.save(); ctx.globalAlpha = eo(seg(lt, 0, .8)); ctx.beginPath(); ctx.rect(px, py, pw, ph); ctx.clip();
+        const sc = Math.max(pw / photo.naturalWidth, ph / photo.naturalHeight) * (1.04 + lt * .01);
+        const dw = photo.naturalWidth * sc, dh = photo.naturalHeight * sc;
+        ctx.filter = 'grayscale(1) contrast(1.1) brightness(.85)';
+        const ox = Math.min(px, Math.max(px + pw - dw, px + pw * .5 - .27 * dw)), oy = Math.min(py, Math.max(py + ph - dh, py + ph * .42 - .37 * dh));
+        ctx.drawImage(photo, ox, oy, dw, dh); ctx.filter = 'none';
+        const g = v ? ctx.createLinearGradient(0, py + ph * .55, 0, py + ph) : ctx.createLinearGradient(px, 0, px + pw * .3, 0);
+        g.addColorStop(0, v ? 'rgba(8,9,10,0)' : 'rgba(8,9,10,1)'); g.addColorStop(1, v ? 'rgba(8,9,10,1)' : 'rgba(8,9,10,0)');
+        ctx.fillStyle = g; ctx.fillRect(px, py, pw, ph); ctx.restore();
+      }
+      const tx = pad, ty = v ? H * .66 : H * .38, sz = (h ? 92 : 76) * s;
+      rise('Data, not', tx, ty, sz, lt - .3);
+      rise('a logo.', tx, ty + sz * 1.05, sz, lt - .5, { color: P.brass2 });
+      const a = eo(seg(lt, 1.2, 1.8));
+      text('Full breakdown', tx, ty + sz * 2.2, { size: 22 * s, m: true, color: P.grey, alpha: a });
+      text('jamalakim.com', tx, ty + sz * 2.2 + 64 * s, { size: 56 * s, alpha: a });
+      text('Sources: GBR 2026 · Savills 2025/26 · Miami-Dade PA · Not investment advice', tx, ty + sz * 2.2 + 110 * s, { size: (v ? 15 : 13) * s, m: true, color: P.grey, alpha: a });
+      break;
+    }
+  }
+}
+
+function renderFrame(T) {
+  ctx.fillStyle = P.ink; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.035)'; ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 120 * s) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  let i = starts.findIndex((st, k) => T >= st && T < st + D[k]); if (i < 0) i = VO.length - 1;
+  const lt = T - starts[i];
+  ctx.save(); ctx.globalAlpha = 1 - seg(lt, D[i] - .2, D[i]) * (i < VO.length - 1 ? 1 : 0);
+  scene(i, lt); ctx.restore();
+  const cut = seg(lt, 0, .22); if (i > 0 && cut < 1) { ctx.fillStyle = P.brass; ctx.fillRect(0, 0, W * (1 - eio(cut)), 6 * s); }
+  chrome(T, i);
+}
+window.setup = setup; window.renderFrame = renderFrame;
+window.fontsReady = Promise.all([document.fonts.load('800 40px "Inter Tight"'), document.fonts.load('700 40px "Inter Tight"'), document.fonts.load('500 40px "IBM Plex Mono"'),
+  new Promise(r => { const im = document.getElementById('photo'); if (im.complete) r(); else { im.onload = r; im.onerror = r; } })]);
+</script>
+</body>
+</html>

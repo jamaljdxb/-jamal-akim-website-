@@ -6,7 +6,7 @@ const { chromium } = require('playwright');
 const [page_, mode = 'v', dursJson = '[]', a, b] = process.argv.slice(2);
 const fps = 30;
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ['--allow-file-access-from-files'] });
   const page = await browser.newPage();
   await page.goto('file://' + path.resolve(page_));
   await page.evaluate(() => window.fontsReady);
