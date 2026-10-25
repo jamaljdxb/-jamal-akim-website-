@@ -5,6 +5,7 @@
 //     durs.json: { "<cut>": [sceneDur, ...] } — stretches scenes to match a voiceover
 //     track.wav: soundtrack muxed in place of silence
 //   node video/render.cjs <cut> part1.mp4 --range 0,60   (render only seconds 0–60, for parallel renders)
+//   --page studio.html   render the v2 editorial design instead of composer.html
 // Cuts: main (16:9 YouTube), hook, motivate, whatif, identity (9:16 Shorts/Reels/TikTok)
 const http = require('http');
 const fs = require('fs');
@@ -20,6 +21,7 @@ const stills = flag('--stills');
 const timing = flag('--timing');
 const audio = flag('--audio');
 const range = flag('--range');
+const pageFile = flag('--page', 'composer.html');
 const outDir = path.join(__dirname, 'out');
 const out = args[1] && !args[1].startsWith('--') ? args[1] : path.join(outDir, `jamal-akim-${cut}.mp4`);
 
@@ -36,7 +38,7 @@ const server = http.createServer((req, res) => {
   const browser = await chromium.launch();
   const page = await browser.newPage();
   page.on('pageerror', e => console.error('page error:', e.message));
-  await page.goto(`http://localhost:${server.address().port}/composer.html`);
+  await page.goto(`http://localhost:${server.address().port}/${pageFile}`);
   await page.evaluate(() => window.fontsReady);
   const durs = timing ? JSON.parse(fs.readFileSync(timing, 'utf8'))[cut] : null;
   const duration = await page.evaluate(([c, d]) => window.setup(c, d), [cut, durs]);
@@ -45,7 +47,7 @@ const server = http.createServer((req, res) => {
   if (stills) {
     for (const t of stills.split(',').map(Number)) {
       const data = await page.evaluate(t => { window.renderFrame(t); return document.getElementById('c').toDataURL('image/png'); }, t);
-      const f = path.join(outDir, `still-${cut}-${t}.png`);
+      const f = path.join(outDir, `still-${pageFile.replace('.html', '')}-${cut}-${t}.png`);
       fs.writeFileSync(f, Buffer.from(data.split(',')[1], 'base64'));
       console.log(f);
     }

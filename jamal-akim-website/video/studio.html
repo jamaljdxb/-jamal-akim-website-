@@ -1,0 +1,947 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Jamal Akim Studio</title>
+<style>
+  @font-face{font-family:"Inter Tight";src:url(assets/fonts/inter-tight-latin-500-normal.woff2) format("woff2");font-weight:500;}
+  @font-face{font-family:"Inter Tight";src:url(assets/fonts/inter-tight-latin-700-normal.woff2) format("woff2");font-weight:700;}
+  @font-face{font-family:"Inter Tight";src:url(assets/fonts/inter-tight-latin-800-normal.woff2) format("woff2");font-weight:800;}
+  @font-face{font-family:"Instrument Serif";src:url(assets/fonts/instrument-serif-latin-400-normal.woff2) format("woff2");font-style:normal;}
+  @font-face{font-family:"Instrument Serif";src:url(assets/fonts/instrument-serif-latin-400-italic.woff2) format("woff2");font-style:italic;}
+  @font-face{font-family:"IBM Plex Mono";src:url(assets/fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2");font-weight:400;}
+  @font-face{font-family:"IBM Plex Mono";src:url(assets/fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2");font-weight:500;}
+  html,body{margin:0;background:#0E0E0E;}
+  canvas{display:block;max-width:100vw;max-height:100vh;margin:0 auto;}
+  #ui{position:fixed;left:8px;bottom:8px;color:#ccc;font:12px monospace;}
+</style>
+<script src="assets/d3-array.min.js"></script>
+<script src="assets/d3-geo.min.js"></script>
+<script src="assets/topojson-client.min.js"></script>
+<script src="assets/land.js"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"></div>
+<script>
+// ------------------------------------------------------------------
+// Jamal Akim Studio: editorial motion system (v2).
+// Swiss grid, tight grotesk + italic serif + mono, paper / ink / ultramarine,
+// signal orange for marks. Same contract as composer.html:
+// setup(cut, durs) + renderFrame(t), so render.cjs drives it with --page studio.html.
+// Copy rules: fragments, short lines, no dashes.
+// ------------------------------------------------------------------
+
+const P = {
+  paper: '#ECE8DF', paper2: '#E1DCD0', ink: '#0E0E0E', ink2: '#1B1B1B',
+  blue: '#2B3DF5', blueL: '#8E9BFF', orange: '#FF5A1F', grey: '#8A867E',
+};
+const THEMES = {
+  paper: { bg: P.paper, fg: P.ink, sub: '#6F6B63', acc: P.blue, line: 'rgba(14,14,14,0.10)', card: P.paper2 },
+  ink: { bg: P.ink, fg: P.paper, sub: '#8F8A80', acc: P.blueL, line: 'rgba(236,232,223,0.09)', card: P.ink2 },
+  blue: { bg: P.blue, fg: P.paper, sub: 'rgba(236,232,223,0.72)', acc: P.paper, line: 'rgba(236,232,223,0.14)', card: '#2333D8' },
+};
+
+let canvas, ctx, W, H, s, portrait, M, CUT, SCENES = [], DURATION = 0, TH = THEMES.paper;
+
+// ---------- maths ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const eo = x => 1 - Math.pow(1 - x, 3);
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eback = x => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+function rng(seed) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+
+// ---------- type ----------
+function setFont(kind, size, weight = 800) {
+  if (kind === 's') { ctx.font = `italic ${size * 1.14}px "Instrument Serif"`; ctx.letterSpacing = '0px'; }
+  else if (kind === 'mono') { ctx.font = `${weight} ${size}px "IBM Plex Mono"`; ctx.letterSpacing = `${size * .08}px`; }
+  else { ctx.font = `${weight} ${size}px "Inter Tight"`; ctx.letterSpacing = `${-0.035 * size}px`; }
+}
+
+// "*word*" = italic serif accent, "_word_" = orange marker
+function parseLine(str) {
+  const segs = [], re = /(\*[^*]+\*|_[^_]+_)/g; let last = 0, m;
+  while ((m = re.exec(str))) {
+    if (m.index > last) segs.push({ txt: str.slice(last, m.index), k: 'h' });
+    segs.push({ txt: m[0].slice(1, -1), k: m[0][0] === '*' ? 's' : 'm' });
+    last = m.index + m[0].length;
+  }
+  if (last < str.length) segs.push({ txt: str.slice(last), k: 'h' });
+  return segs;
+}
+
+function measure(line, size, weight) {
+  const segs = parseLine(line); let w = 0;
+  for (const g of segs) { setFont(g.k, size, weight); g.w = ctx.measureText(g.txt).width; w += g.w; }
+  return { segs, w };
+}
+
+// Masked headline: each line rises out of its own band. Returns block box.
+function headline(lines, x, y, o = {}, t = 99) {
+  const size = o.size || 120 * s, weight = o.weight || 800, lh = size * (o.lh || 1.0);
+  const L = lines.map(l => measure(l, size, weight));
+  const top = o.anchor === 'top' ? y : o.anchor === 'bottom' ? y - L.length * lh : y - L.length * lh / 2;
+  const st = o.stagger ?? .09;
+  L.forEach((line, i) => {
+    const p = eo(seg(t, i * st, i * st + .6)), out = o.out || 0;
+    const ly = top + i * lh;
+    let lx = o.align === 'center' ? x - line.w / 2 : o.align === 'right' ? x - line.w : x;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, ly - lh * .08, W, lh * 1.16); ctx.clip();
+    const base = ly + size * .84 + (1 - p) * lh * 1.05 - out * lh * 1.15;
+    ctx.globalAlpha = o.alpha ?? 1;
+    for (const g of line.segs) {
+      if (g.k === 'm') {
+        const mp = eo(seg(t, i * st + .4, i * st + .85));
+        ctx.fillStyle = P.orange;
+        ctx.fillRect(lx - size * .05, base - size * .74, (g.w + size * .1) * mp, size * .86);
+      }
+      setFont(g.k, size, weight);
+      ctx.fillStyle = g.k === 's' ? (o.acc || TH.acc) : g.k === 'm' ? P.ink : (o.color || TH.fg);
+      ctx.fillText(g.txt, lx, base);
+      lx += g.w;
+    }
+    ctx.restore();
+  });
+  return { top, h: L.length * lh, w: Math.max(...L.map(l => l.w)), lines: L, lh };
+}
+
+function mono(txt, x, y, o = {}) {
+  ctx.save();
+  setFont('mono', o.size || 18 * s, o.weight || 500);
+  ctx.fillStyle = o.color || TH.sub; ctx.globalAlpha = o.alpha ?? 1;
+  ctx.textAlign = o.align || 'left'; ctx.textBaseline = o.baseline || 'middle';
+  ctx.fillText(o.raw ? txt : txt.toUpperCase(), x, y);
+  const w = ctx.measureText(o.raw ? txt : txt.toUpperCase()).width;
+  ctx.restore();
+  return w;
+}
+
+function serif(txt, x, y, o = {}) {
+  ctx.save();
+  ctx.font = `${o.italic === false ? '' : 'italic '}${o.size || 60 * s}px "Instrument Serif"`; ctx.letterSpacing = '0px';
+  ctx.fillStyle = o.color || TH.acc; ctx.globalAlpha = o.alpha ?? 1;
+  ctx.textAlign = o.align || 'left'; ctx.textBaseline = o.baseline || 'alphabetic';
+  ctx.fillText(txt, x, y);
+  ctx.restore();
+}
+
+function head(txt, x, y, o = {}) {
+  ctx.save();
+  setFont('h', o.size || 80 * s, o.weight || 800);
+  ctx.fillStyle = o.color || TH.fg; ctx.globalAlpha = o.alpha ?? 1;
+  ctx.textAlign = o.align || 'left'; ctx.textBaseline = o.baseline || 'alphabetic';
+  ctx.fillText(txt, x, y);
+  ctx.restore();
+}
+
+// ---------- graphic devices ----------
+function hair(x1, y1, x2, y2, color, lw = 1) {
+  ctx.strokeStyle = color || TH.line; ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+}
+
+// hand drawn loop around something, p = draw progress
+function scribble(cx, cy, rx, ry, p, color = P.orange, seed = 3, lw) {
+  if (p <= 0) return;
+  const r = rng(seed); const wob = [r(), r(), r(), r()];
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = lw || 5 * s; ctx.lineCap = 'round';
+  ctx.beginPath();
+  const turns = 1.12, steps = 90, end = Math.floor(steps * p);
+  for (let i = 0; i <= end; i++) {
+    const a = -2.2 + (i / steps) * Math.PI * 2 * turns;
+    const k = 1 + .06 * Math.sin(a * 2 + wob[0] * 6) + .04 * Math.sin(a * 3 + wob[1] * 6) + (i / steps) * .07;
+    const x = cx + Math.cos(a) * rx * k, y = cy + Math.sin(a) * ry * k + Math.sin(a * 5 + wob[2]) * 2 * s;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.stroke(); ctx.restore();
+}
+
+function underline(x, y, w, p, color = P.orange, seed = 5) {
+  if (p <= 0) return;
+  const r = rng(seed);
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 5 * s; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x, y);
+  const n = 12;
+  for (let i = 1; i <= n * p; i++) ctx.lineTo(x + w * i / n, y + (r() - .5) * 6 * s - i * .4 * s);
+  ctx.stroke(); ctx.restore();
+}
+
+function strike(x, y, w, p, color = P.orange) {
+  if (p <= 0) return;
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 6 * s; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w * p, y - 6 * s * p); ctx.stroke(); ctx.restore();
+}
+
+function arrowUp(x, y, h, color) {
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 6 * s; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - h); ctx.moveTo(x - h * .32, y - h * .68); ctx.lineTo(x, y - h); ctx.lineTo(x + h * .32, y - h * .68); ctx.stroke();
+  ctx.restore();
+}
+
+// ---------- line icons (stroke only) ----------
+function icon(name, cx, cy, r, color, lw = 3.4) {
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(r / 50, r / 50);
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const B = () => ctx.beginPath(), S = () => ctx.stroke();
+  switch (name) {
+    case 'drop': B(); ctx.moveTo(0, -38); ctx.bezierCurveTo(16, -16, 30, 0, 30, 14); ctx.arc(0, 14, 30, 0, Math.PI); ctx.bezierCurveTo(-30, 0, -16, -16, 0, -38); S(); break;
+    case 'rice': B(); ctx.moveTo(-38, 0); ctx.lineTo(38, 0); ctx.arc(0, 0, 38, 0, Math.PI); S(); B(); ctx.moveTo(-14, 38); ctx.lineTo(14, 38); S();
+      for (const [x, y] of [[-16, -8], [-2, -14], [12, -8], [4, -24], [-14, -22]]) { B(); ctx.ellipse(x, y, 5, 2.6, .3, 0, Math.PI * 2); ctx.fill(); } break;
+    case 'wheat': B(); ctx.moveTo(0, 42); ctx.lineTo(0, -42); S();
+      for (let i = 0; i < 4; i++) { const y = -30 + i * 15; B(); ctx.ellipse(-9, y, 6, 11, -.6, 0, Math.PI * 2); S(); B(); ctx.ellipse(9, y, 6, 11, .6, 0, Math.PI * 2); S(); } break;
+    case 'book': B(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-20, -34, -42, -28); ctx.lineTo(-42, 28); ctx.quadraticCurveTo(-20, 22, 0, 32); ctx.quadraticCurveTo(20, 22, 42, 28); ctx.lineTo(42, -28); ctx.quadraticCurveTo(20, -34, 0, -24); ctx.lineTo(0, 32); S(); break;
+    case 'eye': B(); ctx.moveTo(-44, 0); ctx.quadraticCurveTo(0, -40, 44, 0); ctx.quadraticCurveTo(0, 40, -44, 0); S(); B(); ctx.arc(0, 0, 13, 0, Math.PI * 2); S(); break;
+    case 'chart': B(); ctx.moveTo(-42, -40); ctx.lineTo(-42, 38); ctx.lineTo(44, 38); S(); B(); ctx.moveTo(-30, 18); ctx.lineTo(-8, -2); ctx.lineTo(10, 8); ctx.lineTo(36, -30); S(); break;
+    case 'map': B(); ctx.moveTo(-44, -28); ctx.lineTo(-14, -38); ctx.lineTo(14, -28); ctx.lineTo(44, -38); ctx.lineTo(44, 30); ctx.lineTo(14, 40); ctx.lineTo(-14, 30); ctx.lineTo(-44, 40); ctx.closePath(); S();
+      B(); ctx.moveTo(-14, -38); ctx.lineTo(-14, 30); ctx.moveTo(14, -28); ctx.lineTo(14, 40); S(); break;
+    case 'house': B(); ctx.moveTo(-40, -4); ctx.lineTo(0, -40); ctx.lineTo(40, -4); S(); B(); ctx.rect(-30, -8, 60, 48); S(); break;
+  }
+  ctx.restore();
+}
+
+// ---------- globe ----------
+const LAND = topojson.feature(window.LAND, window.LAND.objects.land);
+const GRAT = d3.geoGraticule10();
+const PLACES = {
+  abudhabi: { name: 'Abu Dhabi', c: [54.43, 24.54] },
+  hatfield: { name: 'Hatfield', c: [-0.223, 51.763] },
+  newcastle: { name: 'Newcastle', c: [-1.617, 54.978] },
+  paris: { name: 'Paris', c: [2.352, 48.857] },
+  madrid: { name: 'Madrid', c: [-3.704, 40.417] },
+  california: { name: 'California', c: [-118.24, 34.05] },
+  bahrain: { name: 'Bahrain', c: [50.56, 26.07] },
+};
+
+function globe(cx, cy, R, center) {
+  const proj = d3.geoOrthographic().scale(R).translate([cx, cy]).rotate([-center[0], -center[1] * .85]).clipAngle(90);
+  const path = d3.geoPath(proj, ctx);
+  const onBlue = TH === THEMES.blue, onInk = TH === THEMES.ink;
+  ctx.save();
+  ctx.fillStyle = onBlue ? '#3547F7' : onInk ? '#151515' : P.paper2;
+  ctx.beginPath(); path({ type: 'Sphere' }); ctx.fill();
+  ctx.strokeStyle = TH.line; ctx.lineWidth = 1; ctx.beginPath(); path(GRAT); ctx.stroke();
+  ctx.fillStyle = onBlue ? P.paper : onInk ? P.paper : P.ink;
+  ctx.beginPath(); path(LAND); ctx.fill();
+  ctx.strokeStyle = TH.fg; ctx.lineWidth = 1.5 * s; ctx.beginPath(); path({ type: 'Sphere' }); ctx.stroke();
+  ctx.restore();
+  return proj;
+}
+const visible = (proj, c) => { const r = proj.rotate(); return d3.geoDistance(c, [-r[0], -r[1]]) < Math.PI / 2 - .05; };
+
+function pin(x, y, T, a = 1) {
+  ctx.save(); ctx.globalAlpha = a;
+  const p = (T * .9) % 1;
+  ctx.strokeStyle = P.orange; ctx.lineWidth = 2 * s; ctx.globalAlpha = a * (1 - p);
+  ctx.beginPath(); ctx.arc(x, y, 10 * s + p * 46 * s, 0, Math.PI * 2); ctx.stroke();
+  ctx.globalAlpha = a; ctx.fillStyle = P.orange;
+  ctx.beginPath(); ctx.arc(x, y, 10 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function tag(txt, x, y, a = 1) {
+  ctx.save(); ctx.globalAlpha = a;
+  setFont('mono', 18 * s, 500);
+  const w = ctx.measureText(txt.toUpperCase()).width + 24 * s;
+  const lx = clamp(x + 18 * s, 10 * s, W - w - 10 * s), ly = y - 50 * s;
+  ctx.fillStyle = P.orange; ctx.fillRect(lx, ly, w, 34 * s);
+  ctx.fillStyle = P.ink; ctx.textBaseline = 'middle'; ctx.fillText(txt.toUpperCase(), lx + 12 * s, ly + 17 * s);
+  ctx.restore();
+}
+
+// ---------- page chrome ----------
+let GRAIN = [];
+function makeGrain() {
+  GRAIN = [0, 1, 2].map(k => {
+    const c = document.createElement('canvas'); c.width = c.height = 384;
+    const g = c.getContext('2d'), img = g.createImageData(384, 384), r = rng(11 + k * 97);
+    for (let i = 0; i < img.data.length; i += 4) { const v = r() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+    g.putImageData(img, 0, 0); return c;
+  });
+}
+
+function grid() {
+  const cols = portrait ? 6 : 12, gw = (W - 2 * M) / cols;
+  ctx.strokeStyle = TH.line; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i <= cols; i++) { const x = Math.round(M + i * gw) + .5; ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+  ctx.stroke();
+}
+
+function cropMarks() {
+  const L = 22 * s, o = M * .45;
+  ctx.strokeStyle = TH.fg; ctx.globalAlpha = .55; ctx.lineWidth = 1.5;
+  for (const [x, y, dx, dy] of [[o, o, 1, 1], [W - o, o, -1, 1], [o, H - o, 1, -1], [W - o, H - o, -1, -1]]) {
+    ctx.beginPath(); ctx.moveTo(x, y + dy * L); ctx.lineTo(x, y); ctx.lineTo(x + dx * L, y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function chrome(idx, T) {
+  const top = portrait ? H * .075 : M * .72, bot = portrait ? H * .9 : H - M * .72;
+  mono('Jamal Akim', M, top, { color: TH.fg, size: 17 * s });
+  if (!portrait) mono('How I see it', M + 210 * s, top, { size: 17 * s });
+  mono(`Ch ${String(idx + 1).padStart(2, '0')} / ${String(SCENES.length).padStart(2, '0')}`, W - M, top, { align: 'right', size: 17 * s });
+  if (!portrait) mono('24.54° N   54.43° E', M, bot, { size: 15 * s });
+  const tc = `${String(Math.floor(T / 60)).padStart(2, '0')}:${String(Math.floor(T % 60)).padStart(2, '0')}:${String(Math.floor((T % 1) * 30)).padStart(2, '0')}`;
+  mono(tc, W - M, bot, { align: 'right', size: 15 * s });
+}
+
+function grain(T) {
+  const g = GRAIN[Math.floor(T * 12) % 3];
+  ctx.save(); ctx.globalAlpha = TH === THEMES.paper ? .085 : .07; ctx.globalCompositeOperation = 'overlay';
+  for (let x = 0; x < W; x += 384) for (let y = 0; y < H; y += 384) ctx.drawImage(g, x, y);
+  ctx.restore();
+}
+
+function useTheme(name) { TH = THEMES[name] || THEMES.paper; }
+function fullBleed(name, x = 0, w = W) { const th = THEMES[name]; ctx.fillStyle = th.bg; ctx.fillRect(x, 0, w, H); }
+
+// ---------- scene library ----------
+// Beats: groups of lines that replace each other. A beat can flip the page colour.
+function Beats(beats, dur, o = {}) {
+  return { dur, bg: o.bg || 'paper', draw(t) {
+    for (let i = 0; i < beats.length; i++) {
+      const b = beats[i], end = i + 1 < beats.length ? beats[i + 1].t : dur;
+      if (t < b.t || t > end) continue;
+      const lt = t - b.t, out = beats[i + 1] ? eio(seg(t, end - .28, end)) : 0;
+      if (b.bg) { fullBleed(b.bg); useTheme(b.bg); grid(); }
+      const size = (b.size || o.size || 150) * s * (portrait ? (o.pScale ?? .78) : 1);
+      const x = b.align === 'center' ? W / 2 : M;
+      const box = headline(b.lines, x, H * (b.y ?? o.y ?? .5), { size, align: b.align, out, stagger: b.stagger }, lt);
+      if (b.kicker) mono(b.kicker, x, box.top - 36 * s, { alpha: eo(seg(lt, 0, .4)) * (1 - out), align: b.align === 'center' ? 'center' : 'left' });
+      if (b.note) mono(b.note, x, box.top + box.h + 40 * s, { alpha: eo(seg(lt, .5, .9)) * (1 - out), align: b.align === 'center' ? 'center' : 'left', color: TH.fg });
+      if (b.circle != null) {
+        const ln = box.lines[b.circle], lw = ln.w;
+        const cy = box.top + b.circle * box.lh + size * .5;
+        scribble(x + lw / 2, cy, lw * .6, size * .62, eo(seg(lt, .55, 1.1)) * (1 - out), P.orange, 7 + i);
+      }
+    }
+  } };
+}
+
+function Title(dur) {
+  return { dur, bg: 'blue', draw(t) {
+    const size = (portrait ? 300 : 360) * s;
+    const box = headline(['Jamal', 'Akim'], M - 8 * s, portrait ? H * .44 : H * .52, { size, lh: .86, stagger: .14 }, t);
+    const ry = portrait ? H * .7 : H * .28, rx = portrait ? M : W - M;
+    ['Property', 'Business', 'People'].forEach((w, i) => {
+      const a = eo(seg(t, 1 + i * .2, 1.4 + i * .2));
+      mono(`0${i + 1}  ${w}`, rx, ry + i * 40 * s, { align: portrait ? 'left' : 'right', color: P.paper, alpha: a, size: 22 * s });
+    });
+    const a = eo(seg(t, 2.2, 2.8));
+    serif('how I see things.', portrait ? M : W - M, portrait ? H * .82 : H * .8, { size: 84 * s, color: P.paper, alpha: a, align: portrait ? 'left' : 'right' });
+    hair(portrait ? M : W - M - 520 * s * a, (portrait ? H * .835 : H * .82), portrait ? M + 520 * s * a : W - M, (portrait ? H * .835 : H * .82), P.paper, 2 * s);
+  } };
+}
+
+function slip(x, y, w, h, subject, grade, t, at, mark) {
+  const p = eback(seg(t, at, at + .6)); if (p <= 0) return;
+  ctx.save(); ctx.translate(x + w / 2, y + h / 2 + (1 - p) * 80 * s); ctx.rotate((mark === 'circle' ? 1.5 : -2) * Math.PI / 180);
+  ctx.globalAlpha = clamp(p);
+  ctx.fillStyle = '#F7F4EC'; ctx.fillRect(-w / 2, -h / 2, w, h);
+  ctx.strokeStyle = 'rgba(14,14,14,.18)'; ctx.lineWidth = 1;
+  for (let k = 1; k < 7; k++) hair(-w / 2 + 24 * s, -h / 2 + k * h / 7, w / 2 - 24 * s, -h / 2 + k * h / 7, 'rgba(14,14,14,.12)');
+  mono('Report', -w / 2 + 28 * s, -h / 2 + 34 * s, { color: '#6F6B63', size: 15 * s });
+  mono(subject, -w / 2 + 28 * s, -h / 2 + 70 * s, { color: P.ink, size: 24 * s });
+  head(grade, w / 2 - 40 * s, h / 2 - 40 * s, { size: h * .62, align: 'right', color: P.ink });
+  if (mark === 'stamp') {
+    const sp = eback(seg(t, at + .8, at + 1.15));
+    if (sp > 0) {
+      ctx.save(); ctx.translate(-w * .05, h * .1); ctx.rotate(-12 * Math.PI / 180); ctx.scale(2 - sp, 2 - sp); ctx.globalAlpha = clamp(sp);
+      ctx.strokeStyle = P.orange; ctx.lineWidth = 5 * s; ctx.strokeRect(-130 * s, -40 * s, 260 * s, 80 * s);
+      setFont('mono', 40 * s, 500); ctx.fillStyle = P.orange; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('FAILED', 0, 2 * s);
+      ctx.restore();
+    }
+  } else scribble(w / 2 - 40 * s - h * .22, h / 2 - 40 * s - h * .24, h * .33, h * .32, eo(seg(t, at + .8, at + 1.5)), P.blue, 9);
+  ctx.restore();
+}
+
+function MathsFinance(dur) {
+  return { dur, bg: 'paper', draw(t) {
+    const w = (portrait ? 400 : 440) * s, h = (portrait ? 300 : 360) * s;
+    if (portrait) { slip(M, H * .16, w, h, 'Maths', 'F', t, .3, 'stamp'); slip(W - M - w, H * .16 + h * .8, w, h, 'Finance', 'A', t, 1.9, 'circle'); }
+    else { slip(W * .5, H * .14, w, h, 'Maths', 'F', t, .3, 'stamp'); slip(W * .5 + w * .72, H * .14 + h * .55, w, h, 'Finance', 'A', t, 1.9, 'circle'); }
+    const hx = M, hy = portrait ? H * .72 : H * .62, size = (portrait ? 110 : 130) * s;
+    if (t < 3.6) headline(['Failed maths.', 'Got an A', 'in finance.'], hx, hy, { size }, t - .2);
+    else if (t < 7.6) headline(['Same brain.', 'Different', '*context*.'], hx, hy, { size, out: eio(seg(t, 7.3, 7.6)) }, t - 3.6);
+    else headline(['Give me', 'a *story*.', 'I see it all.'], hx, hy, { size }, t - 7.6);
+  } };
+}
+
+function Context(dur) {
+  const items = [['book', 'Story'], ['eye', 'Visuals'], ['chart', 'Graphs'], ['map', 'Maps']];
+  return { dur, bg: 'ink', draw(t) {
+    const size = (portrait ? 110 : 130) * s;
+    headline(['My brain', 'runs on *context*.'], M, portrait ? H * .2 : H * .17, { size, anchor: 'top' }, t);
+    const cols = portrait ? 2 : 4, gw = (W - 2 * M) / cols, top = portrait ? H * .48 : H * .6, ch = (portrait ? 300 : 280) * s;
+    items.forEach(([ic, name], i) => {
+      const a = eo(seg(t, .9 + i * .3, 1.4 + i * .3)); if (a <= 0) return;
+      const x = M + (i % cols) * gw, y = top + Math.floor(i / cols) * ch;
+      ctx.globalAlpha = a;
+      hair(x, y, x + gw * a, y, P.paper, 1.5);
+      mono(`0${i + 1}`, x, y + 30 * s, { color: P.orange });
+      icon(ic, x + 60 * s, y + 130 * s, 50 * s, P.paper);
+      head(name, x, y + 240 * s, { size: 54 * s, color: P.paper });
+      ctx.globalAlpha = 1;
+    });
+    mono('Not just words on a page', M, portrait ? H * .86 : H * .93 - 20 * s, { alpha: eo(seg(t, 3, 3.5)) });
+  } };
+}
+
+function Fundamentals(dur) {
+  const items = [['drop', 'the water', 'Location', P.blue], ['rice', 'the rice', 'Infrastructure', P.ink], ['wheat', 'the staple', 'Scarcity', P.orange]];
+  return { dur, bg: 'paper', draw(t) {
+    mono('The basics', M, portrait ? H * .17 : H * .14, { color: P.orange, alpha: eo(seg(t, 0, .4)) });
+    headline(['Before the hype.'], M, portrait ? H * .2 : H * .17, { size: (portrait ? 96 : 120) * s, anchor: 'top' }, t);
+    const cols = 3, gw = (W - 2 * M) / cols, top = portrait ? H * .38 : H * .4;
+    items.forEach(([ic, a, b, col], i) => {
+      const x = M + i * gw, p = eo(seg(t, .8 + i * .35, 1.4 + i * .35)); if (p <= 0) return;
+      ctx.globalAlpha = p;
+      hair(x, top, x + gw - 30 * s, top, P.ink, 1.5);
+      mono(`0${i + 1}`, x, top + 30 * s, { color: P.ink });
+      icon(ic, x + 55 * s, top + 140 * s, (portrait ? 40 : 52) * s, col);
+      const flip = seg(t, 4.4 + i * .35, 4.9 + i * .35);
+      serif(a, x, top + (portrait ? 270 : 300) * s - flip * 20 * s, { size: (portrait ? 56 : 72) * s, color: P.ink, alpha: p * (1 - flip) });
+      head(b, x, top + (portrait ? 270 : 300) * s + (1 - eo(flip)) * 20 * s, { size: (portrait ? 34 : 50) * s, color: col, alpha: eo(flip) });
+      ctx.globalAlpha = 1;
+    });
+    if (t > 7) headline(['Get these right.', 'The rest is _seasoning_.'], M, portrait ? H * .74 : H * .78, { size: (portrait ? 70 : 84) * s, anchor: 'top' }, t - 7);
+  } };
+}
+
+function SeenIt(dur) {
+  const rows = ['Seen the news.', 'Seen the content.', 'Seen the numbers.'];
+  return { dur, bg: 'paper', draw(t) {
+    const size = (portrait ? 92 : 120) * s;
+    if (t < 5.6) {
+      const box = headline(rows, M, H * .5, { size, stagger: 1.2, out: eio(seg(t, 5.3, 5.6)) }, t);
+      box.lines.forEach((l, i) => strike(M, box.top + i * box.lh + size * .5, l.w, eo(seg(t, 4.2 + i * .15, 4.6 + i * .15))));
+    } else {
+      fullBleed('blue'); useTheme('blue'); grid();
+      headline(['Now see it', '*my way*.'], M, H * .5, { size: size * 1.3 }, t - 5.6);
+    }
+  } };
+}
+
+const SAADIYAT = [
+  ['Louvre Abu Dhabi', 'Open'],
+  ['Guggenheim Abu Dhabi', 'Cultural district'],
+  ['Zayed National Museum', 'Cultural district'],
+  ['Abrahamic Family House', 'Mosque · church · synagogue'],
+  ['#19 beach in the world', 'Crisp blue water'],
+  ['Top 3 luxury hotel brand', 'In negotiation'],
+];
+const ABUDHABI = [
+  ['ADGM', 'Wall Street moving in'],
+  ['BlackRock · J.P. Morgan', 'Family offices too'],
+  ['Formula 1', 'Yas Marina'],
+  ['Sphere Abu Dhabi', 'Coming to Yas'],
+  ['Disney park', 'Announced for Yas'],
+  ['Etihad Rail', 'Connecting it all'],
+];
+
+function globeBox(big) {
+  if (portrait) return { cx: W / 2, cy: H * (big ? .36 : .3), R: W * (big ? .4 : .36) };
+  return { cx: W * (big ? .33 : .3), cy: H * .54, R: H * (big ? .38 : .36) };
+}
+
+function GlobeAssets(dur, o = {}) {
+  const per = o.per ?? 1.4;
+  return { dur, bg: 'paper', draw(t, T) {
+    const g = globeBox(false);
+    const c = d3.geoInterpolate([0, 20], PLACES.abudhabi.c)(eio(seg(t, 0, 2.6)));
+    const proj = globe(g.cx, g.cy, g.R * (.88 + .12 * eo(seg(t, 0, 2.6))), c);
+    const [px, py] = proj(PLACES.abudhabi.c);
+    const pa = eo(seg(t, 2.3, 2.8));
+    const g2 = 3 + SAADIYAT.length * per + 1.4, second = t >= g2;
+    pin(px, py, T, pa); if (pa > 0) tag(second ? 'Abu Dhabi' : 'Saadiyat Island', px, py, pa);
+    const list = second ? ABUDHABI : SAADIYAT, t0 = second ? g2 + .2 : 3;
+    const fade = second ? 1 : 1 - seg(t, g2 - .4, g2);
+    const lx = portrait ? M : W * .6, top = portrait ? H * .56 : H * .2, rh = (portrait ? 80 : 104) * s, rw = portrait ? W - 2 * M : W * .4 - M;
+    mono(second ? 'Across Abu Dhabi' : 'On Saadiyat', lx, top - 30 * s, { color: P.orange, alpha: eo(seg(t, 2.8, 3.2)) * fade });
+    list.forEach(([name, sub], i) => {
+      const at = t0 + i * per, a = eo(seg(t, at, at + .45)) * fade; if (a <= 0) return;
+      const y = top + i * rh;
+      ctx.globalAlpha = a;
+      hair(lx, y, lx + rw * eo(seg(t, at, at + .6)), y, P.ink, 1);
+      mono(String(i + 1).padStart(2, '0'), lx, y + rh * .5, { color: '#6F6B63', size: 16 * s });
+      head(name, lx + 60 * s, y + rh * .48, { size: (portrait ? 34 : 40) * s, weight: 700, baseline: 'middle' });
+      mono(sub, lx + 60 * s, y + rh * .82, { size: (portrait ? 13 : 14) * s });
+      ctx.globalAlpha = 1;
+    });
+  } };
+}
+
+const MOVES = [
+  ['hatfield', 'Prices|up?', 'The Louvre + a #19 beach'],
+  ['newcastle', 'What would|it show?', 'ADGM. Wall Street.'],
+  ['paris', 'Would the|world fly in?', 'F1 + the Sphere'],
+  ['madrid', 'What would|it say?', 'Mosque. Church. Synagogue.'],
+  ['california', 'Would capital|follow?', 'BlackRock. J.P. Morgan.'],
+  ['bahrain', 'The whole|region?', 'All of it'],
+];
+
+function GlobeMove(dur, o = {}) {
+  const intro = o.intro ?? 2.6, moves = o.moves || MOVES, per = (dur - intro) / moves.length;
+  return { dur, bg: 'paper', draw(t, T) {
+    const g = globeBox(true);
+    let i = clamp(Math.floor((t - intro) / per), -1, moves.length - 1);
+    const lt = t - intro - i * per;
+    const prev = i <= 0 ? PLACES.abudhabi.c : PLACES[moves[i - 1][0]].c, target = i < 0 ? prev : PLACES[moves[i][0]].c;
+    const fp = i < 0 ? 0 : eio(seg(lt, 0, per * .3));
+    const proj = globe(g.cx, g.cy, g.R * (1 - Math.sin(fp * Math.PI) * clamp(d3.geoDistance(prev, target), 0, 1.6) * .2), d3.geoInterpolate(prev, target)(fp));
+    if (t < intro + .2) {
+      const [px, py] = proj(PLACES.abudhabi.c); pin(px, py, T, 1 - seg(t, intro - .4, intro));
+      headline(['What if', 'I *moved* it?'], portrait ? M : W * .6, portrait ? H * .72 : H * .5, { size: (portrait ? 110 : 130) * s, out: eio(seg(t, intro - .3, intro)) }, t);
+      return;
+    }
+    const [key, q, moved] = moves[i], place = PLACES[key];
+    const [px, py] = proj(place.c);
+    if (visible(proj, place.c)) { pin(px, py, T, seg(lt, per * .28, per * .36)); tag(place.name, px, py, seg(lt, per * .3, per * .38)); }
+    const ca = eo(seg(lt, per * .34, per * .46)) * (1 - seg(lt, per - .3, per));
+    if (ca <= 0) return;
+    const cx = portrait ? M : W * .58, cy = portrait ? H * .6 : H * .16, cw = portrait ? W - 2 * M : W * .42 - M, chh = (portrait ? 560 : 700) * s;
+    ctx.save(); ctx.globalAlpha = ca; ctx.translate(0, (1 - ca) * 40 * s);
+    ctx.fillStyle = '#F7F4EC'; ctx.fillRect(cx, cy, cw, chh);
+    ctx.strokeStyle = P.ink; ctx.lineWidth = 1.5; ctx.strokeRect(cx, cy, cw, chh);
+    mono(`What if  0${i + 1}`, cx + 32 * s, cy + 40 * s, { color: P.orange });
+    mono('Illustrative', cx + cw - 32 * s, cy + 40 * s, { align: 'right', size: 14 * s });
+    head(place.name, cx + 32 * s, cy + 130 * s, { size: (portrait ? 80 : 96) * s });
+    hair(cx + 32 * s, cy + 160 * s, cx + cw - 32 * s, cy + 160 * s, P.ink, 1);
+    mono('Move in', cx + 32 * s, cy + 196 * s, { size: 15 * s });
+    serif(moved, cx + 32 * s, cy + 260 * s, { size: (portrait ? 48 : 56) * s, color: P.blue });
+    const by = cy + chh - 70 * s, bmax = (portrait ? 170 : 250) * s, bw = (portrait ? 96 : 110) * s, b1 = cx + 32 * s, b2 = b1 + bw + 30 * s;
+    const grow = eo(seg(lt, per * .5, per * .8)), h1 = bmax * .32, h2 = bmax * (.32 + .68 * grow);
+    ctx.fillStyle = P.paper2; ctx.fillRect(b1, by - h1, bw, h1); ctx.strokeStyle = P.ink; ctx.strokeRect(b1, by - h1, bw, h1);
+    ctx.fillStyle = P.blue; ctx.fillRect(b2, by - h2, bw, h2);
+    mono('Today', b1, by + 26 * s, { size: 14 * s }); mono('With it', b2, by + 26 * s, { size: 14 * s, color: P.blue });
+    arrowUp(b2 + bw / 2, by - h2 - 18 * s, 50 * s * grow, P.orange);
+    const qx = b2 + bw + 36 * s;
+    if (seg(lt, per * .58, per * .7) > 0) headline(q.split('|'), qx, by - bmax * .5, { size: (portrait ? 44 : 50) * s, weight: 700 }, lt - per * .58);
+    ctx.restore();
+  } };
+}
+
+function Already(dur) {
+  return { dur, bg: 'blue', draw(t, T) {
+    const g = globeBox(true);
+    const proj = globe(portrait ? g.cx : W * .7, portrait ? H * .62 : H * .55, portrait ? g.R : H * .36, d3.geoInterpolate([-30, 40], PLACES.abudhabi.c)(eio(seg(t, 0, 2))));
+    const [px, py] = proj(PLACES.abudhabi.c); pin(px, py, T, eo(seg(t, 1.6, 2)));
+    const size = (portrait ? 110 : 140) * s;
+    if (t < 2.6) headline(['No need', 'to imagine.'], M, portrait ? H * .24 : H * .5, { size, out: eio(seg(t, 2.3, 2.6)) }, t);
+    else headline(['It’s', 'already *here*.'], M, portrait ? H * .24 : H * .5, { size }, t - 2.6);
+  } };
+}
+
+function Beach(dur) {
+  return { dur, bg: 'paper', draw(t, T) {
+    for (let k = 0; k < 9; k++) {
+      ctx.strokeStyle = P.blue; ctx.globalAlpha = .55 - k * .05; ctx.lineWidth = 1.6 * s; ctx.beginPath();
+      for (let x = 0; x <= W; x += 10) { const y = H * (portrait ? .7 : .74) + k * 22 * s + Math.sin(x / (110 * s) + T * 1.2 + k * .7) * 7 * s; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    const out = seg(t, 4.4, 4.8);
+    if (t < 4.8) {
+      const n = Math.round(lerp(50, 19, eo(seg(t, .2, 1.8))));
+      head(`#${n}`, M - 10 * s, portrait ? H * .44 : H * .62, { size: (portrait ? 380 : 460) * s, color: P.blue, alpha: 1 - out });
+      headline(['beach in', 'the world.'], portrait ? M : W * .56, portrait ? H * .56 : H * .45, { size: (portrait ? 90 : 110) * s, out }, t - 1);
+      mono('Crisp blue water', portrait ? M : W * .56, portrait ? H * .66 : H * .62, { alpha: eo(seg(t, 2, 2.4)) * (1 - out), color: P.blue });
+    } else if (t < dur - 4) {
+      const rows = ['Blue water', 'White sand', 'Luxury hotels', 'Museums next door', 'A cultural district'];
+      const tw = W - 2 * M, x0 = M, y0 = portrait ? H * .22 : H * .18, rh = (portrait ? 92 : 88) * s, c1 = x0 + tw * (portrait ? .62 : .62), c2 = x0 + tw * (portrait ? .88 : .86);
+      const a = eo(seg(t, 4.8, 5.2)) * (1 - seg(t, dur - 4.3, dur - 4));
+      mono('Other top beaches', c1, y0, { align: 'center', alpha: a, size: (portrait ? 12 : 15) * s });
+      mono('Saadiyat', c2, y0, { align: 'center', alpha: a, color: P.blue, size: (portrait ? 12 : 15) * s });
+      rows.forEach((r, i) => {
+        const ra = eo(seg(t, 5.2 + i * .45, 5.6 + i * .45)) * a, y = y0 + 40 * s + i * rh;
+        ctx.globalAlpha = ra;
+        hair(x0, y, x0 + tw, y, P.ink, 1);
+        head(r, x0, y + rh * .62, { size: (portrait ? 40 : 52) * s, weight: 700 });
+        if (i < 3) mono('Yes', c1, y + rh * .5, { align: 'center', color: P.ink });
+        else { mono('No', c1, y + rh * .5, { align: 'center', color: P.orange }); strike(c1 - 30 * s, y + rh * .5, 60 * s, eo(seg(t, 5.6 + i * .45, 6 + i * .45))); }
+        mono('Yes', c2, y + rh * .5, { align: 'center', color: P.blue });
+        if (i >= 3) scribble(c2, y + rh * .5, 60 * s, 30 * s, eo(seg(t, 5.8 + i * .45, 6.4 + i * .45)), P.blue, 20 + i, 3 * s);
+        ctx.globalAlpha = 1;
+      });
+    } else {
+      headline(['That’s why', 'it’s my *#1*.'], M, H * .45, { size: (portrait ? 120 : 150) * s }, t - (dur - 4));
+      mono('Mo at Aldar made me see it', M, H * .45 + (portrait ? 200 : 210) * s, { alpha: eo(seg(t, dur - 2.8, dur - 2.4)), color: P.ink });
+    }
+  } };
+}
+
+function Scarcity(dur) {
+  return { dur, bg: 'ink', draw(t) {
+    if (t > 8.2) {
+      headline(['Premium land.', 'Premium *location*.'], M, H * .5, { size: (portrait ? 110 : 140) * s }, t - 8.2);
+      return;
+    }
+    const n = Math.round(18000 * eo(seg(t, .2, 2)));
+    head(n.toLocaleString('en-GB'), M - 8 * s, portrait ? H * .27 : H * .34, { size: (portrait ? 220 : 260) * s, color: P.paper });
+    mono('Homes coming', M, portrait ? H * .31 : H * .4, { alpha: eo(seg(t, .8, 1.2)) });
+    const cols = portrait ? 15 : 30, gap = (portrait ? 56 : 42) * s, r = (portrait ? 15 : 12) * s;
+    const gx = portrait ? M + r : W - M - (cols - 1) * gap - r, gy = portrait ? H * .38 : H * .5;
+    const villas = new Set([3, 17, 26, 41, 55, 62, 78, 89, 97, 104, 118, 126, 133, 147, 152, 166, 175]);
+    const lit = seg(t, 3.6, 5);
+    for (let k = 0; k < 180; k++) {
+      const a = eo(seg(t, 1 + k * .008, 1.3 + k * .008)), v = villas.has(k);
+      const x = gx + (k % cols) * gap, y = gy + Math.floor(k / cols) * gap;
+      ctx.globalAlpha = a * (v ? 1 : 1 - lit * .7);
+      ctx.fillStyle = v && lit > 0 ? P.orange : P.paper;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    mono('1 dot = 100 homes', gx - r, gy + (180 / cols) * gap + 10 * s, { size: 14 * s, alpha: eo(seg(t, 2, 2.4)) });
+    if (t > 4) headline(['Under _1,800_', 'villas & mansions.'], M, portrait ? H * .8 : H * .8, { size: (portrait ? 70 : 76) * s }, t - 4);
+  } };
+}
+
+function AldarPlan(dur) {
+  return { dur, bg: 'paper', draw(t) {
+    mono('Then the developer moved', M, portrait ? H * .17 : H * .15, { color: P.orange, alpha: eo(seg(t, 0, .4)) });
+    headline(['ALDAR'], M - 8 * s, portrait ? H * .2 : H * .18, { size: (portrait ? 230 : 280) * s, anchor: 'top' }, t);
+    headline(['Government backed.', 'They *never* do this.'], portrait ? M : W * .56, portrait ? H * .4 : H * .3, { size: (portrait ? 56 : 64) * s, weight: 700 }, t - 1);
+    const bx = M, bw = W - 2 * M, by = portrait ? H * .52 : H * .55, bh = (portrait ? 110 : 120) * s;
+    const p1 = eio(seg(t, 2.4, 3.6)), p2 = eio(seg(t, 3.2, 4.4));
+    ctx.strokeStyle = P.ink; ctx.lineWidth = 1.5; ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = P.ink; ctx.fillRect(bx, by, bw / 2 * p1, bh);
+    ctx.fillStyle = P.blue; ctx.fillRect(bx + bw / 2, by, bw / 2 * p2, bh);
+    head('50', bx + 30 * s, by + bh * .75, { size: bh * .7, color: P.paper, alpha: seg(t, 3.2, 3.6) });
+    head('50', bx + bw / 2 + 30 * s, by + bh * .75, { size: bh * .7, color: P.paper, alpha: seg(t, 4, 4.4) });
+    mono('During build', bx, by + bh + 30 * s, { alpha: seg(t, 3.4, 3.8) });
+    mono('On handover', bx + bw / 2, by + bh + 30 * s, { alpha: seg(t, 4.2, 4.6) });
+    const ca = eback(seg(t, 5, 5.5));
+    if (ca > 0) {
+      ctx.save(); ctx.translate(bx + bw * .08, by - 50 * s); ctx.rotate(-4 * Math.PI / 180); ctx.scale(ca, ca);
+      ctx.fillStyle = P.orange; ctx.fillRect(-10 * s, -36 * s, 250 * s, 72 * s);
+      head('5% down', 14 * s, 0, { size: 44 * s, color: P.ink, baseline: 'middle' });
+      ctx.restore();
+    }
+    if (t > 6) headline(['Waiver.', 'Incentives.'], M, portrait ? H * .7 : H * .76, { size: (portrait ? 72 : 80) * s, anchor: 'top' }, t - 6);
+    const chips = ['SEI Saadiyat', 'Saadiyat Grove · The Designer', 'Baccarat'];
+    let x = portrait ? M : W * .5, y = portrait ? H * .85 : H * .8;
+    chips.forEach((c, k) => {
+      const a = eo(seg(t, 8 + k * .3, 8.4 + k * .3)); setFont('mono', 18 * s, 500);
+      const w = ctx.measureText(c.toUpperCase()).width + 36 * s;
+      if (x + w > W - M) { x = portrait ? M : W * .5; y += 60 * s; }
+      ctx.globalAlpha = a; ctx.strokeStyle = P.ink; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, 46 * s);
+      mono(c, x + 18 * s, y + 23 * s, { color: P.ink }); ctx.globalAlpha = 1;
+      x += w + 14 * s;
+    });
+  } };
+}
+
+function Generational(dur) {
+  return { dur, bg: 'paper', draw(t) {
+    headline(['Real estate', 'is *generational*.'], M, portrait ? H * .26 : H * .3, { size: (portrait ? 110 : 140) * s }, t);
+    const y = portrait ? H * .66 : H * .72, xs = [0, 1, 2].map(i => M + i * (W - 2 * M) / 2.6);
+    hair(M, y, M + (W - 2 * M) * eio(seg(t, 1, 3)), y, P.ink, 2);
+    ['You', 'Your kids', 'Their kids'].forEach((l, i) => {
+      const a = eback(seg(t, 1.2 + i * .7, 1.8 + i * .7)); if (a <= 0) return;
+      ctx.save(); ctx.translate(xs[i] + 50 * s, y - 80 * s); ctx.scale(a, a); icon('house', 0, 0, (44 + i * 10) * s, i === 2 ? P.blue : P.ink, 3); ctx.restore();
+      mono(l, xs[i], y + 34 * s, { color: P.ink, alpha: clamp(a) });
+    });
+    if (t > 4) mono('Location · Infrastructure · Scarcity', M, portrait ? H * .8 : H * .86, { alpha: eo(seg(t, 4, 4.4)), color: P.orange });
+  } };
+}
+
+function CTA(dur, o = {}) {
+  return { dur, bg: 'blue', draw(t) {
+    headline(['Jamal', 'Akim'], M - 8 * s, portrait ? H * .38 : H * .44, { size: (portrait ? 260 : 300) * s, lh: .86 }, t);
+    mono('Property · Business · People', M, portrait ? H * .56 : H * .72, { color: P.paper, alpha: eo(seg(t, .8, 1.2)), size: 20 * s });
+    const msg = o.msg || (portrait ? 'Follow' : 'Subscribe'), a = eo(seg(t, 1.4, 1.8));
+    setFont('h', 44 * s, 800); const bw = ctx.measureText(msg).width + 80 * s;
+    const bx = portrait ? M : W - M - bw, by = portrait ? H * .62 : H * .62;
+    ctx.globalAlpha = a; ctx.fillStyle = P.paper; ctx.fillRect(bx, by, bw, 90 * s);
+    head(msg, bx + 40 * s, by + 60 * s, { size: 44 * s, color: P.blue }); ctx.globalAlpha = 1;
+    if (o.disclaimer !== false) mono('Not financial advice. Check current terms before you buy.', M, portrait ? H * .8 : H * .86, { size: 14 * s, alpha: a * .8, raw: false });
+  } };
+}
+
+// ---------- "numbers need a story" scenes ----------
+function DataFlood(dur) {
+  return { dur, bg: 'paper', draw(t) {
+    const r = rng(42), rows = 60, cols = portrait ? 4 : 9;
+    const scroll = t * 140 * s, rh = 34 * s, cw = (W - 2 * M) / cols;
+    const dens = eo(seg(t, 0, 2.5));
+    ctx.save(); setFont('mono', 20 * s, 400); ctx.fillStyle = P.ink;
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        const v = r(); if (v > dens) continue;
+        const y = ((i * rh - scroll) % (rows * rh) + rows * rh) % (rows * rh);
+        const kinds = [`${(r() * 12).toFixed(2)}%`, `AED ${(r() * 9 + 1).toFixed(2)}M`, `${Math.round(r() * 300 + 40)} SQM`, `Q${1 + Math.floor(r() * 4)} 20${26 + Math.floor(r() * 5)}`, `${(r() * 2000 + 800).toFixed(0)}/SQFT`, `+${(r() * 30).toFixed(1)}`];
+        ctx.globalAlpha = .25 + .55 * r();
+        ctx.fillText(kinds[Math.floor(r() * kinds.length)], M + j * cw, y);
+      }
+    }
+    ctx.restore();
+    const veil = seg(t, 2.6, 3.2);
+    ctx.fillStyle = `rgba(236,232,223,${.86 * veil})`; ctx.fillRect(0, 0, W, H);
+    const size = (portrait ? 124 : 150) * s;
+    if (t > 2.8 && t < 6.4) headline(['Most of the market', 'thinks in *spreadsheets*.'], M, H * .5, { size: size * .8, out: eio(seg(t, 6.1, 6.4)) }, t - 2.8);
+    if (t > 6.4) headline(['Too much data.', '_Zero_ decisions.'], M, H * .5, { size }, t - 6.4);
+  } };
+}
+
+function BrainSplit(dur) {
+  return { dur, bg: 'paper', draw(t) {
+    const p = eio(seg(t, 0, .8));
+    const half = portrait ? H / 2 : W / 2;
+    if (portrait) { fullBleed('paper'); ctx.fillStyle = P.blue; ctx.fillRect(0, H - half * p, W, half * p); }
+    else { ctx.fillStyle = P.blue; ctx.fillRect(W - half * p, 0, half * p, H); }
+    const A = portrait ? [M, H * .12] : [M, H * .2], B = portrait ? [M, H * .62] : [W / 2 + M * .6, H * .2];
+    mono('Left brain', A[0], A[1], { color: P.ink, alpha: eo(seg(t, .6, 1)) });
+    useTheme('paper');
+    headline(['Data.', 'Yields.', 'Spreadsheets.'], A[0], A[1] + 30 * s, { size: (portrait ? 120 : 110) * s, anchor: 'top', stagger: .25 }, t - .8);
+    mono('Right brain', B[0], B[1], { color: P.paper, alpha: eo(seg(t, 2.2, 2.6)) });
+    useTheme('blue');
+    headline(['Story.', 'Context.', '*Visuals*.'], B[0], B[1] + 30 * s, { size: (portrait ? 120 : 110) * s, anchor: 'top', stagger: .25 }, t - 2.4);
+    if (t > 5) {
+      const a = eback(seg(t, 5, 5.5));
+      const cx = portrait ? W - M - 170 * s : W / 2 + M * .6 + 200 * s, cy = portrait ? H * .9 : H * .82;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(-5 * Math.PI / 180); ctx.scale(a, a);
+      ctx.fillStyle = P.orange; ctx.fillRect(-170 * s, -50 * s, 340 * s, 100 * s);
+      setFont('h', 50 * s, 800); ctx.fillStyle = P.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('That’s me.', 0, 4 * s);
+      ctx.restore();
+    }
+    useTheme('paper');
+  } };
+}
+
+function SameFact(dur) {
+  const spec = ['1 BED · 70 SQM', 'FROM AED 2.95M', '5% BOOKING', '50/50 PLAN', 'HANDOVER Q4 2030'];
+  return { dur, bg: 'paper', draw(t) {
+    const colW = portrait ? W - 2 * M : (W - 2 * M) / 2 - 30 * s;
+    const ax = M, ay = portrait ? H * .14 : H * .2, bx = portrait ? M : W / 2 + 30 * s, by = portrait ? H * .5 : H * .2;
+    mono('The spreadsheet', ax, ay, { color: P.orange, alpha: eo(seg(t, 0, .3)) });
+    ctx.fillStyle = '#F7F4EC'; ctx.globalAlpha = eo(seg(t, 0, .4)); ctx.fillRect(ax, ay + 24 * s, colW, (portrait ? 380 : 460) * s); ctx.globalAlpha = 1;
+    spec.forEach((l, i) => {
+      const a = eo(seg(t, .3 + i * .2, .6 + i * .2)), y = ay + (portrait ? 84 : 90) * s + i * (portrait ? 66 : 76) * s;
+      mono(l, ax + 28 * s, y, { color: P.ink, size: 30 * s, alpha: a });
+      hair(ax + 28 * s, y + 32 * s, ax + colW - 28 * s, y + 32 * s, 'rgba(14,14,14,.12)');
+    });
+    mono('The story', bx, by, { color: P.blue, alpha: eo(seg(t, 2.2, 2.5)) });
+    if (t > 2.4) headline(['A home on Saadiyat.', 'Museums around you.', 'The sea close by.', '_5%_ to get in.'], bx, by + 30 * s, { size: (portrait ? 76 : 70) * s, anchor: 'top', stagger: .55, weight: 700 }, t - 2.4);
+    if (t > dur - 3) {
+      ctx.fillStyle = P.blue; const p = eio(seg(t, dur - 3, dur - 2.6)); ctx.fillRect(0, H * (1 - .3 * p), W, H * .3 * p);
+      useTheme('blue');
+      headline(['Same facts.', 'One you *feel*.'], M, H * .85, { size: (portrait ? 64 : 80) * s }, t - (dur - 2.7));
+      useTheme('paper');
+    }
+    mono('SEI Saadiyat by Aldar · from Aldar broker material', M, portrait ? H * .93 : H * .93, { size: 12 * s, alpha: .7 * eo(seg(t, 1, 1.4)) });
+  } };
+}
+
+function Paper(dur) {
+  return { dur, bg: 'paper', draw(t) {
+    const size = (portrait ? 120 : 150) * s;
+    headline(['Trust is good.', 'Paper is *better*.'], M, portrait ? H * .25 : H * .38, { size }, t);
+    // document
+    const dw = (portrait ? 420 : 460) * s, dh = dw * 1.3, dx = portrait ? W - M - dw : W - M - dw, dy = portrait ? H * .45 : H * .2;
+    const p = eo(seg(t, 1.6, 2.2)); if (p <= 0) return;
+    ctx.save(); ctx.translate(dx + dw / 2, dy + dh / 2 + (1 - p) * 60 * s); ctx.rotate(3 * Math.PI / 180); ctx.globalAlpha = p;
+    ctx.fillStyle = '#F7F4EC'; ctx.fillRect(-dw / 2, -dh / 2, dw, dh); ctx.strokeStyle = P.ink; ctx.lineWidth = 1.5; ctx.strokeRect(-dw / 2, -dh / 2, dw, dh);
+    mono('Data sheet', -dw / 2 + 28 * s, -dh / 2 + 40 * s, { color: P.ink });
+    for (let k = 0; k < 9; k++) { const y = -dh / 2 + 90 * s + k * 44 * s; hair(-dw / 2 + 28 * s, y, -dw / 2 + 28 * s + (dw - 56 * s) * (k % 3 === 2 ? .6 : 1), y, 'rgba(14,14,14,.25)', 6 * s); }
+    const sp = eback(seg(t, 2.6, 3));
+    if (sp > 0) {
+      ctx.save(); ctx.translate(dw * .08, dh * .28); ctx.rotate(-14 * Math.PI / 180); ctx.scale(2 - sp, 2 - sp); ctx.globalAlpha = clamp(sp);
+      ctx.strokeStyle = P.blue; ctx.lineWidth = 5 * s; ctx.strokeRect(-150 * s, -42 * s, 300 * s, 84 * s);
+      setFont('mono', 36 * s, 500); ctx.fillStyle = P.blue; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('VERIFIED', 0, 2 * s);
+      ctx.restore();
+    }
+    ctx.restore();
+    if (t > 4) mono('So the numbers stay. Always.', M, portrait ? H * .38 : H * .62, { color: P.ink, size: 22 * s, alpha: eo(seg(t, 4, 4.4)) });
+  } };
+}
+
+function StoryChart(dur) {
+  const events = [[2017, 'Louvre Abu Dhabi opens'], [2023, 'Abrahamic Family House'], [2025, 'Zayed National Museum'], [2026, 'Guggenheim due']];
+  return { dur, bg: 'paper', draw(t) {
+    const x0 = M, x1 = W - M, y0 = portrait ? H * .7 : H * .78, y1 = portrait ? H * .36 : H * .3;
+    const X = yr => lerp(x0, x1, (yr - 2015) / 12);
+    headline(t < 4.5 ? ['Just a line.', 'Nobody *feels* it.'] : ['Same line.', 'Now with the *story*.'], M, portrait ? H * .2 : H * .16, { size: (portrait ? 80 : 100) * s, anchor: 'top', out: t < 4.5 ? eio(seg(t, 4.2, 4.5)) : 0 }, t < 4.5 ? t : t - 4.5);
+    hair(x0, y0, x1, y0, P.ink, 1.5);
+    for (let yr = 2015; yr <= 2027; yr += 2) { mono(String(yr), X(yr), y0 + 30 * s, { align: 'center', size: 14 * s }); hair(X(yr), y0, X(yr), y0 + 10 * s, P.ink); }
+    const pts = []; for (let k = 0; k <= 60; k++) { const yr = 2015 + k / 5; const v = .15 + .5 * ((yr - 2015) / 12) + .08 * Math.sin(yr * 1.7) + (yr > 2017 ? .05 : 0) + (yr > 2023 ? .1 : 0); pts.push([X(yr), lerp(y0, y1, v)]); }
+    const lp = eio(seg(t, .3, 2.6));
+    ctx.save(); ctx.strokeStyle = P.ink; ctx.lineWidth = 3 * s; ctx.beginPath();
+    pts.slice(0, Math.max(2, Math.floor(pts.length * lp))).forEach(([x, y], k) => k ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.restore();
+    mono('Illustrative', x1, y1 - 30 * s, { align: 'right', size: 13 * s });
+    events.forEach(([yr, label], i) => {
+      const a = eo(seg(t, 5 + i * .7, 5.4 + i * .7)); if (a <= 0) return;
+      const x = X(yr + .4), k = Math.round((yr + .4 - 2015) * 5), y = pts[clamp(k, 0, 60)][1];
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = P.orange; ctx.setLineDash([4 * s, 6 * s]); ctx.lineWidth = 1.5 * s; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - (90 + (i % 2) * 70) * s); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = P.orange; ctx.beginPath(); ctx.arc(x, y, 8 * s, 0, Math.PI * 2); ctx.fill();
+      const flip = x > W * .6, lx = flip ? x - 10 * s : x + 10 * s, al = flip ? 'right' : 'left';
+      mono(String(yr), lx, y - (100 + (i % 2) * 70) * s, { color: P.orange, size: (portrait ? 18 : 14) * s, align: al });
+      serif(label, lx, y - (70 + (i % 2) * 70) * s + 8 * s, { size: (portrait ? 34 : 34) * s, color: P.blue, align: al });
+      ctx.globalAlpha = 1;
+    });
+  } };
+}
+
+function Equation(dur) {
+  return { dur, bg: 'ink', draw(t) {
+    const size = (portrait ? 124 : 130) * s;
+    if (t < 4) {
+      const parts = [['Data', P.paper], ['+', P.orange], ['Story', P.blueL], ['=', P.orange], ['Decision', P.paper]];
+      let x = M, y = portrait ? H * .3 : H * .5, line = 0;
+      parts.forEach(([w, col], i) => {
+        setFont(w === 'Story' ? 's' : 'h', size, 800); const tw = ctx.measureText(w).width;
+        if (portrait && x + tw > W - M) { x = M; line++; }
+        const a = eo(seg(t, i * .35, i * .35 + .5));
+        ctx.globalAlpha = a; ctx.fillStyle = col; ctx.fillText(w, x, y + line * size * 1.1 + (1 - a) * 40 * s); ctx.globalAlpha = 1;
+        if (w === 'Decision') underline(x, y + line * size * 1.1 + 24 * s, tw, eo(seg(t, 2.2, 2.9)));
+        x += tw + 34 * s;
+      });
+    } else if (t < 8) headline(['Numbers tell you', '*what*.', 'Story tells you', '*why*.'], M, H * .5, { size: size * .8, stagger: .3 }, t - 4);
+    else headline(['I bring', '_both_.'], M, H * .5, { size: size * 1.3 }, t - 8);
+  } };
+}
+
+// ---------- copy ----------
+const HOOK = [
+  { t: 0, lines: ['I’m dyslexic.'], kicker: 'How I’m wired' },
+  { t: 1.3, lines: ['Can’t spell.'] },
+  { t: 2.5, lines: ['But I *create*.'] },
+  { t: 3.7, lines: ['I *build*.'] },
+  { t: 4.8, lines: ['I *out-think*.'] },
+  { t: 6.1, lines: ['Try me.'], bg: 'blue', size: 300 },
+];
+const WIRED = [
+  { t: 0, lines: ['ADHD.', 'Dyslexic.'] },
+  { t: 2.6, lines: ['I see things', 'most people', '_don’t_.'] },
+  { t: 6.4, lines: ['Not a weakness.'] },
+  { t: 8.4, lines: ['My *edge*.'], bg: 'ink', size: 240, circle: 0 },
+];
+const MOTIVATE = [
+  { t: 0, lines: ['They said', '_disorder_.'] },
+  { t: 2.2, lines: ['I say', '*advantage*.'], bg: 'blue' },
+  { t: 4.4, lines: ['ADHD.'], kicker: 'Means' },
+  { t: 5.4, lines: ['Think fast.', 'Build fast.', 'Move fast.'], stagger: .7 },
+  { t: 8.6, lines: ['Dyslexia.'], kicker: 'Means' },
+  { t: 9.6, lines: ['I see the', '*picture*.'] },
+  { t: 11.6, lines: ['Not just', 'the words.'] },
+  { t: 13.8, lines: ['Not broken.'] },
+  { t: 15.6, lines: ['*Built*', 'different.'], bg: 'blue', size: 220 },
+];
+const VITAL = [
+  { t: 0, lines: ['Numbers matter.'] },
+  { t: 1.8, lines: ['They’re *vital*.'] },
+  { t: 3.4, lines: ['But on their own?'] },
+  { t: 5.2, lines: ['Nobody', '*feels* them.'], bg: 'ink', size: 200, circle: 1 },
+];
+
+const CUTS = {
+  main: { w: 1920, h: 1080, scenes: () => [
+    Beats(HOOK, 8.4, { size: 190 }),
+    Beats(WIRED, 11, { size: 170 }),
+    Title(6.5),
+    MathsFinance(11),
+    Context(7.5),
+    Fundamentals(11),
+    SeenIt(9),
+    GlobeAssets(22),
+    GlobeMove(38),
+    Already(6),
+    Beach(16),
+    Scarcity(12),
+    AldarPlan(12),
+    Generational(8),
+    Beats(MOTIVATE, 18, { bg: 'ink', size: 170 }),
+    CTA(7),
+  ] },
+  story: { w: 1920, h: 1080, scenes: () => [
+    DataFlood(9.5),
+    Beats(VITAL, 8, { size: 170 }),
+    BrainSplit(8),
+    SameFact(12),
+    Paper(7.5),
+    StoryChart(10),
+    Equation(10.5),
+    CTA(6),
+  ] },
+  storyv: { w: 1080, h: 1920, scenes: () => [
+    DataFlood(9.5),
+    Beats(VITAL, 8, { size: 170 }),
+    BrainSplit(8),
+    SameFact(12),
+    Paper(7.5),
+    StoryChart(10),
+    Equation(10.5),
+    CTA(5, { msg: 'Follow' }),
+  ] },
+  hook: { w: 1080, h: 1920, scenes: () => [Beats(HOOK, 8.4, { size: 190 }), CTA(3, { disclaimer: false, msg: 'Follow' })] },
+  motivate: { w: 1080, h: 1920, scenes: () => [Beats(MOTIVATE, 18, { bg: 'ink', size: 170 }), CTA(3, { disclaimer: false, msg: 'Follow' })] },
+  identity: { w: 1080, h: 1920, scenes: () => [Beats(WIRED, 11, { size: 170 }), CTA(3, { disclaimer: false, msg: 'Follow' })] },
+  whatif: { w: 1080, h: 1920, scenes: () => [
+    Beats([{ t: 0, lines: ['What if I moved', 'Abu Dhabi’s', 'best address'] }, { t: 2.4, lines: ['to *your* city?'], bg: 'blue' }], 4.2, { size: 130 }),
+    GlobeAssets(15, { per: .85 }),
+    GlobeMove(25, { intro: 2, moves: MOVES.slice(0, 5) }),
+    Already(5.5),
+    Scarcity(11),
+    CTA(4, { msg: 'Part 2' }),
+  ] },
+};
+
+function setup(cut, durs) {
+  CUT = cut;
+  const def = CUTS[cut];
+  canvas = document.getElementById('c');
+  W = canvas.width = def.w; H = canvas.height = def.h;
+  ctx = canvas.getContext('2d');
+  portrait = H > W; s = Math.min(W, H) / 1080; M = portrait ? W * .08 : W * .055;
+  if (!GRAIN.length) makeGrain();
+  SCENES = def.scenes();
+  let acc = 0;
+  SCENES.forEach((sc, i) => { sc.base = sc.dur; if (durs && durs[i]) sc.dur = durs[i]; sc.start = acc; acc += sc.dur; });
+  DURATION = acc;
+  return DURATION;
+}
+
+function renderFrame(T) {
+  const idx = Math.max(0, SCENES.findIndex(x => T >= x.start && T < x.start + x.dur));
+  const sc = SCENES[idx] || SCENES[SCENES.length - 1], t = T - sc.start;
+  useTheme(sc.bg); fullBleed(sc.bg); grid();
+  ctx.save(); sc.draw(t * sc.base / sc.dur, T); ctx.restore();
+  // TH may have been flipped by a beat; chrome follows the visible page
+  cropMarks(); chrome(idx, T); grain(T);
+  // panel wipe between scenes: ink panel with an orange leading edge
+  const wipe = .32;
+  let x0 = null, x1 = null;
+  if (sc.dur - t < wipe && idx < SCENES.length - 1) { const c = eio(1 - (sc.dur - t) / wipe); x0 = 0; x1 = W * c; }
+  else if (t < wipe && idx > 0) { const r = eio(t / wipe); x0 = W * r; x1 = W; }
+  if (x0 !== null) {
+    ctx.fillStyle = P.ink; ctx.fillRect(x0, 0, x1 - x0, H);
+    ctx.fillStyle = P.orange; ctx.fillRect(x1 < W ? x1 - 10 * s : x0, 0, 10 * s, H);
+  }
+}
+
+window.setup = setup; window.renderFrame = renderFrame;
+window.fontsReady = Promise.all([
+  document.fonts.load('800 40px "Inter Tight"'), document.fonts.load('700 40px "Inter Tight"'), document.fonts.load('500 40px "Inter Tight"'),
+  document.fonts.load('italic 40px "Instrument Serif"'), document.fonts.load('40px "Instrument Serif"'),
+  document.fonts.load('500 40px "IBM Plex Mono"'), document.fonts.load('400 40px "IBM Plex Mono"'),
+]);
+
+if (!navigator.webdriver) {
+  window.fontsReady.then(() => {
+    const q = new URLSearchParams(location.search);
+    setup(q.get('cut') || 'main');
+    const t0 = performance.now() - (+q.get('t') || 0) * 1000, ui = document.getElementById('ui');
+    (function loop() {
+      const T = ((performance.now() - t0) / 1000) % DURATION;
+      renderFrame(T); ui.textContent = `${CUT}  ${T.toFixed(1)} / ${DURATION.toFixed(1)}s`;
+      requestAnimationFrame(loop);
+    })();
+  });
+}
+</script>
+</body>
+</html>
