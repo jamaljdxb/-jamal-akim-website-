@@ -6,8 +6,8 @@ Motion-graphics videos for YouTube, Instagram and TikTok, built in the site's br
 
 | File | Format | Length | Use it for |
 |---|---|---|---|
-| `jamal-akim-main.mp4` | 16:9, 1920×1080 | ~3:33 | **YouTube main video.** The full story |
-| `jamal-akim-whatif.mp4` | 9:16, 1080×1920 | ~63s | Shorts / Reels / TikTok. The "move Saadiyat to your city" map game |
+| `jamal-akim-main.mp4` | 16:9, 1920×1080 | ~3:40 | **YouTube main video.** The full story |
+| `jamal-akim-whatif.mp4` | 9:16, 1080×1920 | ~68s | Shorts / Reels / TikTok. The "move Saadiyat to your city" map game |
 | `jamal-akim-motivate.mp4` | 9:16 | ~21s | Option 2. "Built different" |
 | `jamal-akim-identity.mp4` | 9:16 | ~16s | Option 1. "That's my edge" |
 | `jamal-akim-hook.mp4` | 9:16 | ~11s | Option 3. Punchy hook ("Try me.") |
@@ -25,15 +25,16 @@ The videos are **silent on purpose**. Record your own voice over the top (CapCut
 | 0:42 | Context icons | "My brain runs on context: stories, visuals, graphs, maps. Not just words on a page." |
 | 0:49 | Fundamentals | "Before the hype, the basics. The water, the rice, the staple. In property that's location, infrastructure, scarcity. Get those right and everything else is seasoning." |
 | 1:02 | Seen it | "You've seen the news. You've seen the content. You've reviewed the numbers. Now let me show you how I see it." |
-| 1:11 | Globe → Saadiyat | "Saadiyat Island, Abu Dhabi. The Louvre. The Guggenheim. Zayed National Museum. The 19th best beach in the world. One of the top three luxury hotel brands in the world in negotiation to come. Etihad Rail. BlackRock, J.P. Morgan, family offices." |
-| 1:28 | What if… | "Now… what if I moved it? Hatfield, Hertfordshire: would prices go up? Newcastle: would demand go up? Paris, Madrid, California, Bahrain… what would it do to the place? The investment? The value?" |
-| 2:08 | Already here | "We don't have to imagine. It's already here." |
-| 2:15 | Beach | "Number 19 in the world. Crisp blue water. But other top beaches don't have a museum next door, or a whole cultural district. That's why it's number one to me. Mo at Aldar made me see it this way." |
-| 2:32 | Scarcity | "Eighteen thousand new homes planned. Fewer than eighteen hundred will be villas and mansions. The most premium land. The most premium location." |
-| 2:45 | Aldar | "And then the developer moved. Aldar, government-backed, and they never do this: 50/50, 5% down, a waiver and strong incentives. SEI Saadiyat. Saadiyat Grove, The Designer. Baccarat." |
-| 2:59 | Generational | "Real estate is generational. You, your kids, their kids. Location, infrastructure, scarcity. That's how I see it." |
-| 3:07 | Built different | "They called it a disorder. I call it an advantage. ADHD means I think fast, build fast, move fast. Dyslexia means I see the picture when others only see the words. I'm not broken. I'm built different." |
-| 3:25 | End card | "Subscribe, and let's talk." |
+| 1:11 | Globe → Saadiyat | "Saadiyat Island, Abu Dhabi. The Louvre. The Guggenheim. Zayed National Museum. The Abrahamic Family House: a mosque, a church and a synagogue, side by side. The 19th best beach in the world. And one of the top three luxury hotel brands in the world, in negotiation to come." |
+| 1:25 | Across Abu Dhabi | "And zoom out. ADGM: Wall Street is essentially moving in. BlackRock, J.P. Morgan, family offices. Formula 1 at Yas Marina. The Sphere is coming. A Disney park announced. Etihad Rail connecting it all." |
+| 1:35 | What if… | "Now… what if I moved it? Put the Louvre and a top-20 beach in Hatfield, Hertfordshire: would prices go up? Put ADGM, Wall Street moving in, in Newcastle: what would that show? F1 and the Sphere in Paris: would the world fly in? A mosque, church and synagogue side by side in Madrid: what would it say about the city? BlackRock, J.P. Morgan and family offices in California: would capital follow? All of it in Bahrain: would the region change?" |
+| 2:15 | Already here | "We don't have to imagine. It's already here." |
+| 2:21 | Beach | "Number 19 in the world. Crisp blue water. But other top beaches don't have a museum next door, or a whole cultural district. That's why it's number one to me. Mo at Aldar made me see it this way." |
+| 2:38 | Scarcity | "Eighteen thousand new homes planned. Fewer than eighteen hundred will be villas and mansions. The most premium land. The most premium location." |
+| 2:52 | Aldar | "And then the developer moved. Aldar, government-backed, and they never do this: 50/50, 5% down, a waiver and strong incentives. SEI Saadiyat. Saadiyat Grove, The Designer. Baccarat." |
+| 3:05 | Generational | "Real estate is generational. You, your kids, their kids. Location, infrastructure, scarcity. That's how I see it." |
+| 3:13 | Built different | "They called it a disorder. I call it an advantage. ADHD means I think fast, build fast, move fast. Dyslexia means I see the picture when others only see the words. I'm not broken. I'm built different." |
+| 3:32 | End card | "Subscribe, and let's talk." |
 
 ## Post copy
 
@@ -47,7 +48,7 @@ The videos are **silent on purpose**. Record your own voice over the top (CapCut
 
 ## Check before posting
 
-- Confirm the payment plan, the waiver and incentives, the "#19 beach" ranking, the luxury-hotel negotiation and the 18,000 / 1,800 homes figures against Aldar's current broker material. Off-plan terms change with each release.
+- Confirm Sphere Abu Dhabi and the Disney park are still on track (both announced for Yas Island), and confirm the payment plan, the waiver and incentives, the "#19 beach" ranking, the luxury-hotel negotiation and the 18,000 / 1,800 homes figures against Aldar's current broker material. Off-plan terms change with each release.
 - Check the project chip names (SEI Saadiyat · Saadiyat Grove: The Designer · Baccarat).
 - The end card carries a "not financial advice" line. Keep it on property content.
 

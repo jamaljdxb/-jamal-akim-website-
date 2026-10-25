@@ -233,6 +233,19 @@ function icon(name, cx, cy, r, color = C.brass, lw) {
       for (const y of [-20, -10]) { P(); ctx.moveTo(4, y); ctx.lineTo(28, y); S(); }
       for (const y of [8, 18]) { P(); ctx.moveTo(-28, y); ctx.lineTo(28, y); S(); } break;
     case 'play': P(); ctx.roundRect(-42, -30, 84, 60, 12); S(); P(); ctx.moveTo(-10, -14); ctx.lineTo(16, 0); ctx.lineTo(-10, 14); ctx.closePath(); ctx.fill(); break;
+    case 'faith': // crescent, cross, star — three houses of worship
+      P(); ctx.arc(-30, -2, 15, Math.PI * .3, Math.PI * 1.7); ctx.arc(-24, -2, 11, Math.PI * 1.6, Math.PI * .4, true); ctx.closePath(); S();
+      P(); ctx.moveTo(0, -20); ctx.lineTo(0, 18); ctx.moveTo(-11, -8); ctx.lineTo(11, -8); S();
+      P(); for (const r0 of [0, Math.PI]) { for (let i = 0; i <= 3; i++) { const a = r0 - Math.PI / 2 + i * Math.PI * 2 / 3; const x = 30 + Math.cos(a) * 15, y = -2 + Math.sin(a) * 15; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } } S();
+      P(); ctx.moveTo(-44, 34); ctx.lineTo(44, 34); S(); break;
+    case 'flag': P(); ctx.moveTo(-30, 42); ctx.lineTo(-30, -40); S(); P(); ctx.rect(-30, -40, 64, 44); S();
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) if ((r + c) % 2) { P(); ctx.rect(-30 + c * 64 / 6, -40 + r * 11, 64 / 6, 11); ctx.fill(); } break;
+    case 'sphere': P(); ctx.arc(0, -4, 36, 0, Math.PI * 2); S(); P(); ctx.ellipse(0, -4, 36, 12, 0, 0, Math.PI * 2); S(); P(); ctx.ellipse(0, -4, 14, 36, 0, 0, Math.PI * 2); S();
+      P(); ctx.moveTo(-26, 40); ctx.lineTo(26, 40); S(); break;
+    case 'skyline': [[-40, 6, 14], [-24, -30, 16], [-6, -42, 16], [12, -18, 14], [28, -6, 14]].forEach(([x, y, w]) => { P(); ctx.rect(x, y, w, 40 - y); S(); });
+      P(); ctx.moveTo(2, -42); ctx.lineTo(2, -50); S(); break;
+    case 'castle': P(); ctx.moveTo(-36, 40); ctx.lineTo(-36, -6); ctx.lineTo(-22, -6); ctx.lineTo(-22, 10); ctx.lineTo(-10, 10); ctx.lineTo(-10, -20); ctx.lineTo(0, -40); ctx.lineTo(10, -20); ctx.lineTo(10, 10); ctx.lineTo(22, 10); ctx.lineTo(22, -6); ctx.lineTo(36, -6); ctx.lineTo(36, 40); ctx.closePath(); S();
+      P(); ctx.arc(0, 40, 9, Math.PI, 0); S(); break;
     case 'bolt': P(); ctx.moveTo(8, -42); ctx.lineTo(-20, 6); ctx.lineTo(2, 6); ctx.lineTo(-8, 42); ctx.lineTo(22, -8); ctx.lineTo(0, -8); ctx.closePath(); S(); break;
   }
   function star(x, y, r) { P(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); }
@@ -466,15 +479,22 @@ function SeenIt(dur) {
   } };
 }
 
-const ASSETS = [
+const SAADIYAT = [
   ['dome', 'Louvre Abu Dhabi', 'Open now'],
   ['museum', 'Guggenheim Abu Dhabi', 'Cultural District'],
   ['museum', 'Zayed National Museum', 'Cultural District'],
+  ['faith', 'Abrahamic Family House', 'Mosque · church · synagogue, side by side'],
   ['beach', '#19 beach in the world', 'Crisp blue water'],
   ['hotel', 'A top-3 luxury hotel brand', 'In negotiation'],
-  ['rail', 'Etihad Rail', 'Connecting the UAE'],
-  ['bank', 'BlackRock · J.P. Morgan · family offices', 'Global capital'],
 ];
+const ABUDHABI = [
+  ['skyline', 'ADGM — Wall Street is moving in', 'BlackRock · J.P. Morgan · family offices'],
+  ['flag', 'Formula 1 — Yas Marina', 'Abu Dhabi Grand Prix'],
+  ['sphere', 'Sphere Abu Dhabi', 'Coming to Yas Island'],
+  ['castle', 'Disney theme park', 'Announced for Yas Island'],
+  ['rail', 'Etihad Rail', 'Connecting the UAE'],
+];
+const ASSETS = SAADIYAT.concat(ABUDHABI);
 
 function globeLayout(big) {
   if (portrait) return { cx: W / 2, cy: H * (big ? .37 : .33), R: W * (big ? .42 : .4) };
@@ -492,14 +512,19 @@ function GlobeAssets(dur, o = {}) {
     const proj = globe(g.cx, g.cy, R, c);
     const [px, py] = proj(to);
     const pa = eo(seg(t, 2.6, 3.2));
+    // group 1 = Saadiyat, group 2 = wider Abu Dhabi
+    const g2 = 3.4 + SAADIYAT.length * per + 1.6;
+    const ga = 1 - seg(t, g2 - .4, g2);
+    const second = t >= g2;
     pin(px, py, T, pa);
-    if (pa > 0) pinLabel('Saadiyat Island, Abu Dhabi', px, py, pa);
-    // list
-    const lx = portrait ? W * .08 : W * .58, ly0 = portrait ? H * .56 : H * .2;
-    const rowH = (portrait ? 86 : 96) * s;
-    if (!portrait) label('What’s here — and coming', lx, ly0 - 40 * s, { align: 'left', alpha: eo(seg(t, 3, 3.5)) });
-    ASSETS.forEach(([ic, name, sub], i) => {
-      const at = 3.4 + i * per, a = eo(seg(t, at, at + .5));
+    if (pa > 0) pinLabel(second ? 'Across Abu Dhabi' : 'Saadiyat Island, Abu Dhabi', px, py, pa);
+    const list = second ? ABUDHABI : SAADIYAT, t0 = second ? g2 + .2 : 3.4;
+    const lx = portrait ? W * .08 : W * .58, ly0 = portrait ? H * .56 : H * .22;
+    const rowH = (portrait ? 92 : 104) * s;
+    const ha = second ? eo(seg(t, g2, g2 + .4)) : eo(seg(t, 3, 3.5)) * ga;
+    label(second ? 'Across Abu Dhabi' : 'On Saadiyat — here & coming', lx, ly0 - 40 * s, { align: 'left', alpha: ha, size: (portrait ? 20 : 22) * s });
+    list.forEach(([ic, name, sub], i) => {
+      const at = t0 + i * per, a = eo(seg(t, at, at + .5)) * (second ? 1 : ga);
       if (a <= 0) return;
       const y = ly0 + 20 * s + i * rowH, x = lx + (1 - a) * 60 * s;
       iconBadge(ic, x + 34 * s, y, 34 * s, a);
@@ -520,12 +545,12 @@ function GlobeAssets(dur, o = {}) {
 }
 
 const MOVES = [
-  ['hatfield', 'Would prices go up?'],
-  ['newcastle', 'Would demand go up?'],
-  ['paris', 'Would the world fly in?'],
-  ['madrid', 'Would capital follow?'],
-  ['california', 'Would rents move?'],
-  ['bahrain', 'Would the region change?'],
+  ['hatfield', 'Would prices go up?', 'The Louvre + a #19 beach'],
+  ['newcastle', 'What would it show?', 'ADGM — Wall Street moving in'],
+  ['paris', 'Would the world fly in?', 'F1 + the Sphere'],
+  ['madrid', 'What would it say about the city?', 'Mosque, church & synagogue, side by side'],
+  ['california', 'Would capital follow?', 'BlackRock, J.P. Morgan & family offices'],
+  ['bahrain', 'Would the region change?', 'All of it'],
 ];
 
 function GlobeMove(dur, o = {}) {
@@ -550,7 +575,7 @@ function GlobeMove(dur, o = {}) {
       rich('Now… what if I *moved* it?', W / 2, portrait ? H * .16 : H * .12, { size: (portrait ? 70 : 84) * s, alpha: 1 - seg(t, intro, intro + .3) }, t);
       return;
     }
-    const key = moves[i][0], q = moves[i][1], place = PLACES[key];
+    const [key, q, moved] = moves[i], place = PLACES[key];
     const [px, py] = proj(place.c);
     const arrive = seg(lt, per * .3, per * .4);
     if (visible(proj, place.c)) {
@@ -570,8 +595,8 @@ function GlobeMove(dur, o = {}) {
     // city card
     const ca = eo(seg(lt, per * .4, per * .52)) * (1 - seg(lt, per - .25, per));
     if (ca > 0) {
-      const cw = (portrait ? W * .86 : W * .36), chh = (portrait ? 480 : 560) * s;
-      const cx = portrait ? W / 2 - cw / 2 : W * .6, cy = portrait ? H * .61 : H * .2;
+      const cw = (portrait ? W * .86 : W * .36), chh = (portrait ? 560 : 660) * s;
+      const cx = portrait ? W / 2 - cw / 2 : W * .6, cy = portrait ? H * .6 : H * .18;
       ctx.save(); ctx.globalAlpha = ca; ctx.translate(0, (1 - ca) * 30 * s);
       ctx.fillStyle = 'rgba(27,26,24,0.92)'; ctx.strokeStyle = 'rgba(194,166,126,0.35)'; ctx.lineWidth = 1.5 * s;
       rrect(cx, cy, cw, chh, 12 * s); ctx.fill(); ctx.stroke();
@@ -579,8 +604,13 @@ function GlobeMove(dur, o = {}) {
       label(`What if — 0${i + 1}`, cx + 36 * s, cy + 44 * s, { align: 'left', alpha: ca, size: 20 * s });
       ctx.save(); ctx.globalAlpha = ca; ctx.font = font((portrait ? 54 : 60) * s, 'serif'); ctx.fillStyle = C.paper; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillText(place.name, cx + 36 * s, cy + 104 * s); ctx.restore();
+      label('Move in:', cx + 36 * s, cy + 160 * s, { align: 'left', alpha: ca * eo(seg(lt, per * .45, per * .55)), size: 18 * s, color: C.mute });
+      ctx.save(); ctx.globalAlpha = ca;
+      const msz = (portrait ? 34 : 36) * s, mlines = layout(moved, msz, 'sans', 600, cw - 72 * s).lines.length;
+      rich(moved, cx + 36 * s, cy + 186 * s + mlines * msz * 1.25 / 2, { size: msz, fam: 'sans', weight: 600, color: C.brass, align: 'left', maxW: cw - 72 * s, alpha: ca }, lt - per * .45);
+      ctx.restore();
       // bars
-      const by = cy + chh - (portrait ? 70 : 90) * s, bmax = (portrait ? 160 : 270) * s, bw = (portrait ? 110 : 120) * s;
+      const by = cy + chh - (portrait ? 70 : 90) * s, bmax = (portrait ? 150 : 230) * s, bw = (portrait ? 110 : 120) * s;
       const b1x = cx + 50 * s, b2x = b1x + bw + 60 * s;
       const grow = eo(seg(lt, per * .55, per * .85));
       const h1 = bmax * .35, h2 = bmax * (.35 + .65 * grow);
@@ -832,7 +862,7 @@ const CUTS = {
     ContextIcons(7.5),
     Fundamentals(12.5),
     SeenIt(9.5),
-    GlobeAssets(17),
+    GlobeAssets(23.5),
     GlobeMove(40),
     Already(6.5),
     Beach(17),
@@ -846,7 +876,7 @@ const CUTS = {
   motivate: { w: 1080, h: 1920, scenes: () => [Beats(MOTIVATE, 18.5, { size: 120, pScale: .85 }), CTA(3, { disclaimer: false })] },
   whatif: { w: 1080, h: 1920, scenes: () => [
     Beats([{ t: 0, text: 'What if I moved Abu Dhabi’s best address…', size: 96 }, { t: 2.4, text: '…to *your* city?', size: 140 }], 4.2),
-    GlobeAssets(11.5, { per: 1 }),
+    GlobeAssets(16, { per: .9 }),
     GlobeMove(26, { intro: 2, moves: MOVES.slice(0, 4).concat([MOVES[4]]) }),
     Already(5.5),
     Scarcity(12),
