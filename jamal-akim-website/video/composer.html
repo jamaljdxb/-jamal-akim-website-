@@ -1,0 +1,909 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Jamal Akim — How I See It</title>
+<style>
+  @font-face{font-family:"DM Serif Display";src:url(assets/fonts/dm-serif-display-latin-400-normal.woff2) format("woff2");font-style:normal;}
+  @font-face{font-family:"DM Serif Display";src:url(assets/fonts/dm-serif-display-latin-400-italic.woff2) format("woff2");font-style:italic;}
+  @font-face{font-family:"Inter";src:url(assets/fonts/inter-latin-400-normal.woff2) format("woff2");font-weight:400;}
+  @font-face{font-family:"Inter";src:url(assets/fonts/inter-latin-600-normal.woff2) format("woff2");font-weight:600;}
+  @font-face{font-family:"Inter";src:url(assets/fonts/inter-latin-800-normal.woff2) format("woff2");font-weight:800;}
+  html,body{margin:0;background:#111;}
+  canvas{display:block;max-width:100vw;max-height:100vh;margin:0 auto;}
+  #ui{position:fixed;left:8px;bottom:8px;color:#ccc;font:12px Inter,sans-serif;}
+</style>
+<script src="assets/d3-array.min.js"></script>
+<script src="assets/d3-geo.min.js"></script>
+<script src="assets/topojson-client.min.js"></script>
+<script src="assets/land.js"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"></div>
+<script>
+// ------------------------------------------------------------------
+// Jamal Akim — "How I See It" motion-graphics composer.
+// Every frame is a pure function of time, so render.js can step through
+// it frame by frame. Open with ?cut=main|hook|motivate|whatif to preview.
+// ------------------------------------------------------------------
+
+const C = {
+  ink:'#111111', ink2:'#1b1a18', ink3:'#26241f', paper:'#F2EFE9', dim:'#D8D2C8',
+  mute:'#8f897f', brass:'#C2A67E', brassDeep:'#88755D', sea:'#4FB3E0', red:'#D0654A',
+};
+
+let canvas, ctx, W, H, s, portrait, CUT, SCENES = [], DURATION = 0;
+
+// ---------- maths helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const eo = x => 1 - Math.pow(1 - x, 3);
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eback = x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+// fade in at a, fade out at b
+const life = (t, a, b, fi = .3, fo = .3) => Math.min(eo(seg(t, a, a + fi)), 1 - seg(t, b - fo, b));
+
+// ---------- text ----------
+function font(size, fam = 'serif', weight = 400, italic = false) {
+  return fam === 'serif'
+    ? `${italic ? 'italic ' : ''}${size}px "DM Serif Display"`
+    : `${weight} ${size}px Inter`;
+}
+
+// *word* = brass accent, _word_ = sea accent, ~word~ = muted
+function layout(text, size, fam, weight, maxW, italic) {
+  ctx.font = font(size, fam, weight, italic);
+  ctx.letterSpacing = '0px';
+  const space = ctx.measureText(' ').width;
+  const words = [];
+  let mode = null;
+  for (let raw of text.split(' ')) {
+    let col = null;
+    const open = raw[0];
+    if ('*_~'.includes(open) && raw.length > 1) { mode = open; raw = raw.slice(1); }
+    col = mode;
+    const last = raw[raw.length - 1];
+    const strip = raw.replace(/[*_~]([.,!?…:;’'")]*)$/, '$1');
+    if (strip !== raw || (mode && last === mode)) { raw = strip; words.push({ txt: raw, col }); mode = null; continue; }
+    words.push({ txt: raw, col });
+  }
+  const lines = [];
+  let cur = { words: [], width: 0 };
+  for (const w of words) {
+    w.w = ctx.measureText(w.txt).width;
+    const add = (cur.words.length ? space : 0) + w.w;
+    if (cur.words.length && cur.width + add > maxW) { lines.push(cur); cur = { words: [], width: 0 }; }
+    cur.width += (cur.words.length ? space : 0) + w.w;
+    cur.words.push(w);
+  }
+  if (cur.words.length) lines.push(cur);
+  return { lines, space, lh: size * (fam === 'serif' ? 1.08 : 1.25), size };
+}
+
+const accent = { '*': C.brass, '_': C.sea, '~': C.mute };
+
+// draws block centred vertically on y. t = seconds since block appeared.
+function rich(text, x, y, o = {}, t = 99) {
+  const size = o.size || 90 * s, fam = o.fam || 'serif', weight = o.weight || 400;
+  const maxW = o.maxW || W * .84, align = o.align || 'center';
+  const L = layout(text, size, fam, weight, maxW, o.italic);
+  const total = L.lines.length * L.lh;
+  let yy = y - total / 2 + L.lh / 2;
+  let idx = 0;
+  const stagger = o.stagger ?? .07;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  for (const line of L.lines) {
+    let xx = align === 'center' ? x - line.width / 2 : align === 'right' ? x - line.width : x;
+    for (const w of line.words) {
+      const p = eo(seg(t, idx * stagger, idx * stagger + .45));
+      ctx.globalAlpha = (o.alpha ?? 1) * p;
+      ctx.fillStyle = w.col ? accent[w.col] : (o.color || C.paper);
+      ctx.font = font(size, fam, weight, o.italic);
+      ctx.fillText(w.txt, xx, yy + (1 - p) * size * .35);
+      xx += w.w + L.space;
+      idx++;
+    }
+    yy += L.lh;
+  }
+  ctx.globalAlpha = 1;
+  return { h: total, lines: L.lines.length, width: Math.max(...L.lines.map(l => l.width)) };
+}
+
+function label(text, x, y, o = {}) {
+  ctx.save();
+  ctx.font = font(o.size || 22 * s, 'sans', o.weight || 600);
+  ctx.letterSpacing = (o.spacing ?? 4 * s) + 'px';
+  ctx.fillStyle = o.color || C.brass;
+  ctx.globalAlpha = o.alpha ?? 1;
+  ctx.textAlign = o.align || 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(o.raw ? text : text.toUpperCase(), x, y);
+  ctx.restore();
+}
+
+function textW(text, size, fam = 'sans', weight = 600) {
+  ctx.font = font(size, fam, weight); ctx.letterSpacing = '0px';
+  return ctx.measureText(text).width;
+}
+
+function rrect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+}
+
+// ---------- background ----------
+function background(T) {
+  ctx.fillStyle = C.ink; ctx.fillRect(0, 0, W, H);
+  const g = 90 * s, off = (T * 6 * s) % g;
+  ctx.strokeStyle = 'rgba(242,239,233,0.055)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = -g + off; x < W + g; x += g) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+  for (let y = -g + off * .5; y < H + g; y += g) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+  ctx.stroke();
+  // slow brass glow
+  const gx = W * (.5 + .3 * Math.sin(T * .11)), gy = H * (.45 + .2 * Math.cos(T * .07));
+  const rg = ctx.createRadialGradient(gx, gy, 0, gx, gy, Math.max(W, H) * .6);
+  rg.addColorStop(0, 'rgba(136,117,93,0.16)'); rg.addColorStop(1, 'rgba(136,117,93,0)');
+  ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+}
+
+function vignette() {
+  const rg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .75);
+  rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+}
+
+function brandBug(alpha) {
+  const y = portrait ? H * .095 : 60 * s, x = portrait ? W / 2 : 70 * s;
+  ctx.save(); ctx.globalAlpha = alpha * .85;
+  ctx.font = font(26 * s, 'serif'); ctx.fillStyle = C.paper;
+  ctx.textAlign = portrait ? 'center' : 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('Jamal Akim', x, y);
+  ctx.restore();
+}
+
+function eyebrow(text, t, y) {
+  const a = eo(seg(t, .05, .5));
+  const yy = y ?? (portrait ? H * .2 : H * .13);
+  label(text, W / 2, yy, { alpha: a, size: 22 * s });
+  const lw = 60 * s * a;
+  ctx.fillStyle = C.brassDeep; ctx.globalAlpha = a;
+  ctx.fillRect(W / 2 - lw / 2, yy + 26 * s, lw, 2 * s); ctx.globalAlpha = 1;
+}
+
+function disclaimer(alpha, text) {
+  ctx.save(); ctx.globalAlpha = alpha * .7;
+  ctx.font = font(17 * s, 'sans', 400); ctx.fillStyle = C.mute;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const y = portrait ? H * .9 : H - 34 * s;
+  const L = layout(text || 'Not financial advice. Figures from developer & public sources at time of recording — always verify.', 17 * s, 'sans', 400, W * .86);
+  let yy = y - (L.lines.length - 1) * L.lh / 2;
+  ctx.font = font(17 * s, 'sans', 400);
+  for (const l of L.lines) { ctx.fillText(l.words.map(w => w.txt).join(' '), W / 2, yy); yy += L.lh; }
+  ctx.restore();
+}
+
+// ---------- line icons ----------
+function icon(name, cx, cy, r, color = C.brass, lw) {
+  ctx.save();
+  ctx.translate(cx, cy); ctx.scale(r / 50, r / 50);
+  ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = lw ?? 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const P = () => ctx.beginPath(), S = () => ctx.stroke();
+  switch (name) {
+    case 'drop': P(); ctx.moveTo(0, -36); ctx.bezierCurveTo(14, -16, 28, 0, 28, 14); ctx.arc(0, 14, 28, 0, Math.PI); ctx.bezierCurveTo(-28, 0, -14, -16, 0, -36); S();
+      P(); ctx.arc(0, 14, 16, Math.PI * .6, Math.PI * .95); S(); break;
+    case 'rice': P(); ctx.moveTo(-36, 0); ctx.lineTo(36, 0); ctx.arc(0, 0, 36, 0, Math.PI); S();
+      P(); ctx.moveTo(-14, 36); ctx.lineTo(14, 36); S();
+      for (const [x, y, a] of [[-16, -8, -.5], [-4, -14, .3], [10, -9, -.2], [20, -16, .6], [2, -24, -.4], [-18, -20, .2]]) { ctx.save(); ctx.translate(x, y); ctx.rotate(a); P(); ctx.ellipse(0, 0, 5, 2.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+      P(); ctx.moveTo(22, -30); ctx.lineTo(40, -44); ctx.moveTo(28, -24); ctx.lineTo(46, -38); S(); break;
+    case 'wheat': P(); ctx.moveTo(0, 40); ctx.lineTo(0, -40); S();
+      for (let i = 0; i < 4; i++) { const y = -28 + i * 15; P(); ctx.ellipse(-9, y, 6, 11, -.6, 0, Math.PI * 2); S(); P(); ctx.ellipse(9, y, 6, 11, .6, 0, Math.PI * 2); S(); }
+      P(); ctx.ellipse(0, -42, 5, 9, 0, 0, Math.PI * 2); S(); break;
+    case 'book': P(); ctx.moveTo(0, -24); ctx.quadraticCurveTo(-20, -34, -40, -28); ctx.lineTo(-40, 26); ctx.quadraticCurveTo(-20, 20, 0, 30); ctx.quadraticCurveTo(20, 20, 40, 26); ctx.lineTo(40, -28); ctx.quadraticCurveTo(20, -34, 0, -24); ctx.lineTo(0, 30); S(); break;
+    case 'eye': P(); ctx.moveTo(-42, 0); ctx.quadraticCurveTo(0, -38, 42, 0); ctx.quadraticCurveTo(0, 38, -42, 0); S(); P(); ctx.arc(0, 0, 13, 0, Math.PI * 2); S(); P(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill(); break;
+    case 'chart': P(); ctx.moveTo(-40, -38); ctx.lineTo(-40, 36); ctx.lineTo(42, 36); S();
+      [[-26, 18], [-8, 2], [10, -10], [28, -28]].forEach(([x, h]) => { P(); ctx.rect(x - 6, h, 12, 36 - h); S(); });
+      P(); ctx.moveTo(-30, 4); ctx.lineTo(-8, -12); ctx.lineTo(10, -20); ctx.lineTo(34, -40); S(); break;
+    case 'map': P(); ctx.moveTo(-42, -26); ctx.lineTo(-14, -36); ctx.lineTo(14, -26); ctx.lineTo(42, -36); ctx.lineTo(42, 30); ctx.lineTo(14, 40); ctx.lineTo(-14, 30); ctx.lineTo(-42, 40); ctx.closePath(); S();
+      P(); ctx.moveTo(-14, -36); ctx.lineTo(-14, 30); ctx.moveTo(14, -26); ctx.lineTo(14, 40); S(); break;
+    case 'pin': P(); ctx.arc(0, -10, 24, Math.PI * .85, Math.PI * .15); ctx.lineTo(0, 40); ctx.closePath(); S(); P(); ctx.arc(0, -10, 8, 0, Math.PI * 2); S(); break;
+    case 'museum': P(); ctx.moveTo(-42, -16); ctx.lineTo(0, -40); ctx.lineTo(42, -16); ctx.closePath(); S();
+      for (const x of [-30, -10, 10, 30]) { P(); ctx.moveTo(x, -10); ctx.lineTo(x, 26); S(); }
+      P(); ctx.moveTo(-44, 34); ctx.lineTo(44, 34); S(); break;
+    case 'dome': P(); ctx.ellipse(0, 6, 46, 30, 0, Math.PI, 0); S();
+      for (let i = -3; i <= 3; i++) { P(); ctx.moveTo(i * 13, 6); ctx.lineTo(i * 9, -20 + Math.abs(i) * 3); S(); }
+      P(); ctx.moveTo(-50, 14); ctx.lineTo(50, 14); S();
+      P(); ctx.moveTo(-34, 30); ctx.lineTo(34, 30); S(); break;
+    case 'hotel': P(); ctx.rect(-22, -30, 44, 70); S();
+      for (let y = -18; y < 30; y += 14) { P(); ctx.moveTo(-10, y); ctx.lineTo(-4, y); ctx.moveTo(4, y); ctx.lineTo(10, y); S(); }
+      star(0, -44, 9); break;
+    case 'beach': P(); ctx.arc(18, -16, 14, 0, Math.PI * 2); S();
+      for (let k = 0; k < 3; k++) { P(); for (let x = -44; x <= 44; x += 2) { const y = 14 + k * 12 + Math.sin(x / 9) * 4; x === -44 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } S(); } break;
+    case 'rail': P(); ctx.roundRect(-26, -38, 52, 60, 10); S(); P(); ctx.rect(-16, -26, 32, 18); S();
+      P(); ctx.arc(-12, 8, 4, 0, Math.PI * 2); ctx.arc(12, 8, 4, 0, Math.PI * 2); ctx.fill();
+      P(); ctx.moveTo(-16, 22); ctx.lineTo(-30, 42); ctx.moveTo(16, 22); ctx.lineTo(30, 42); ctx.moveTo(-24, 34); ctx.lineTo(24, 34); S(); break;
+    case 'bank': P(); ctx.moveTo(-42, -16); ctx.lineTo(0, -38); ctx.lineTo(42, -16); ctx.closePath(); S();
+      P(); ctx.moveTo(-36, 34); ctx.lineTo(36, 34); ctx.moveTo(-42, 42); ctx.lineTo(42, 42); S();
+      for (const x of [-24, 0, 24]) { P(); ctx.moveTo(x, -6); ctx.lineTo(x, 26); S(); } break;
+    case 'house': P(); ctx.moveTo(-38, -4); ctx.lineTo(0, -38); ctx.lineTo(38, -4); S(); P(); ctx.rect(-28, -8, 56, 46); S(); P(); ctx.rect(-8, 14, 16, 24); S(); break;
+    case 'news': P(); ctx.rect(-38, -32, 76, 64); S(); P(); ctx.rect(-28, -22, 24, 20); S();
+      for (const y of [-20, -10]) { P(); ctx.moveTo(4, y); ctx.lineTo(28, y); S(); }
+      for (const y of [8, 18]) { P(); ctx.moveTo(-28, y); ctx.lineTo(28, y); S(); } break;
+    case 'play': P(); ctx.roundRect(-42, -30, 84, 60, 12); S(); P(); ctx.moveTo(-10, -14); ctx.lineTo(16, 0); ctx.lineTo(-10, 14); ctx.closePath(); ctx.fill(); break;
+    case 'bolt': P(); ctx.moveTo(8, -42); ctx.lineTo(-20, 6); ctx.lineTo(2, 6); ctx.lineTo(-8, 42); ctx.lineTo(22, -8); ctx.lineTo(0, -8); ctx.closePath(); S(); break;
+  }
+  function star(x, y, r) { P(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); }
+  ctx.restore();
+}
+
+function iconBadge(name, cx, cy, r, a = 1, color = C.brass) {
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.fillStyle = C.ink2; ctx.strokeStyle = 'rgba(194,166,126,0.45)'; ctx.lineWidth = 2 * s;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  icon(name, cx, cy, r * .55, color, 4.5);
+  ctx.restore();
+}
+
+// ---------- globe ----------
+const LAND = topojson.feature(window.LAND, window.LAND.objects.land);
+const GRAT = d3.geoGraticule10();
+const PLACES = {
+  abudhabi: { name: 'Saadiyat Island, Abu Dhabi', c: [54.43, 24.54] },
+  hatfield: { name: 'Hatfield, Hertfordshire', c: [-0.223, 51.763] },
+  newcastle: { name: 'Newcastle', c: [-1.617, 54.978] },
+  paris: { name: 'Paris', c: [2.352, 48.857] },
+  madrid: { name: 'Madrid', c: [-3.704, 40.417] },
+  california: { name: 'California', c: [-118.24, 34.05] },
+  bahrain: { name: 'Bahrain', c: [50.56, 26.07] },
+};
+
+function globe(cx, cy, R, center, opts = {}) {
+  const proj = d3.geoOrthographic().scale(R).translate([cx, cy]).rotate([-center[0], -center[1] * .85]).clipAngle(90);
+  const path = d3.geoPath(proj, ctx);
+  ctx.save();
+  // halo
+  const hg = ctx.createRadialGradient(cx, cy, R * .9, cx, cy, R * 1.25);
+  hg.addColorStop(0, 'rgba(79,179,224,0.10)'); hg.addColorStop(1, 'rgba(79,179,224,0)');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(cx, cy, R * 1.25, 0, Math.PI * 2); ctx.fill();
+  const sg = ctx.createRadialGradient(cx - R * .3, cy - R * .35, R * .1, cx, cy, R);
+  sg.addColorStop(0, '#1d2a31'); sg.addColorStop(1, '#0e1316');
+  ctx.fillStyle = sg; ctx.beginPath(); path({ type: 'Sphere' }); ctx.fill();
+  ctx.strokeStyle = 'rgba(242,239,233,0.07)'; ctx.lineWidth = 1; ctx.beginPath(); path(GRAT); ctx.stroke();
+  ctx.fillStyle = '#3a352d'; ctx.strokeStyle = 'rgba(194,166,126,0.55)'; ctx.lineWidth = 1.2 * s;
+  ctx.beginPath(); path(LAND); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(194,166,126,0.5)'; ctx.lineWidth = 1.5 * s; ctx.beginPath(); path({ type: 'Sphere' }); ctx.stroke();
+  ctx.restore();
+  return proj;
+}
+
+function visible(proj, c) {
+  const r = proj.rotate();
+  return d3.geoDistance(c, [-r[0], -r[1]]) < Math.PI / 2 - .05;
+}
+
+function pin(x, y, T, a = 1, color = C.brass) {
+  ctx.save(); ctx.globalAlpha = a;
+  for (let k = 0; k < 2; k++) {
+    const p = ((T * .8 + k * .5) % 1);
+    ctx.strokeStyle = color; ctx.globalAlpha = a * (1 - p) * .8; ctx.lineWidth = 2 * s;
+    ctx.beginPath(); ctx.arc(x, y, 8 * s + p * 40 * s, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.globalAlpha = a; ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, 9 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(x, y, 3.5 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function pinLabel(text, x, y, a) {
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.font = font(26 * s, 'sans', 600);
+  const w = ctx.measureText(text).width + 28 * s;
+  const lx = clamp(x - w / 2, 16 * s, W - w - 16 * s), ly = y - 70 * s;
+  ctx.fillStyle = 'rgba(17,17,17,0.85)'; ctx.strokeStyle = C.brassDeep; ctx.lineWidth = 1.5 * s;
+  rrect(lx, ly - 22 * s, w, 44 * s, 6 * s); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = C.paper; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, lx + 14 * s, ly);
+  ctx.restore();
+}
+
+// ---------- scene library ----------
+// Each scene: { dur, draw(t, T) } — t local seconds, T global seconds.
+
+// Big punchy lines that replace each other.
+function Beats(beats, dur, o = {}) {
+  return { dur, eyebrow: o.eyebrow, draw(t) {
+    if (o.eyebrow) eyebrow(o.eyebrow, t);
+    for (let i = 0; i < beats.length; i++) {
+      const b = beats[i], end = i + 1 < beats.length ? beats[i + 1].t : dur;
+      if (t < b.t || t > end) continue;
+      const lt = t - b.t, out = 1 - eo(seg(t, end - .18, end));
+      const punch = 1 + .12 * (1 - eo(seg(lt, 0, .35)));
+      ctx.save(); ctx.translate(W / 2, H * (o.y ?? .5)); ctx.scale(punch, punch);
+      const size = (b.size || o.size || 120) * s * (portrait ? (o.pScale ?? .95) : 1);
+      rich(b.text, 0, 0, { size, alpha: out, stagger: b.stagger ?? .06, fam: b.fam || o.fam, weight: b.weight || o.weight, maxW: W * .86, italic: b.italic }, lt);
+      ctx.restore();
+      if (b.sub) rich(b.sub, W / 2, H * (o.y ?? .5) + size * (portrait ? 1.6 : 1.1), { size: 34 * s, fam: 'sans', weight: 400, color: C.dim, alpha: out }, lt - .3);
+    }
+  } };
+}
+
+// Lines that accumulate in place, earlier lines dim.
+function Stack(lines, dur, o = {}) {
+  return { dur, draw(t) {
+    if (o.eyebrow) eyebrow(o.eyebrow, t);
+    const sizes = lines.map(l => (l.size || o.size || 76) * s * (portrait ? .9 : 1));
+    const gap = 26 * s;
+    const blocks = lines.map((l, i) => layout(l.text, sizes[i], l.fam || 'serif', l.weight || 400, W * .84));
+    const hs = blocks.map(b => b.lines.length * b.lh);
+    const total = hs.reduce((a, b) => a + b, 0) + gap * (lines.length - 1);
+    let y = H * (o.y ?? .52) - total / 2;
+    lines.forEach((l, i) => {
+      const next = lines.slice(i + 1).find(n => n.t <= t);
+      const dimmed = next && !l.keep ? .38 : 1;
+      rich(l.text, W / 2, y + hs[i] / 2, { size: sizes[i], fam: l.fam, weight: l.weight, alpha: (t >= l.t ? 1 : 0) * dimmed, color: l.color }, t - l.t);
+      y += hs[i] + gap;
+    });
+  } };
+}
+
+function Title(dur) {
+  return { dur, draw(t) {
+    const y = H * .45;
+    label('This is', W / 2, y - 150 * s, { alpha: eo(seg(t, .1, .6)) });
+    rich('Jamal Akim', W / 2, y, { size: (portrait ? 150 : 190) * s, stagger: .15 }, t - .3);
+    const lw = W * (portrait ? .6 : .36) * eio(seg(t, .9, 1.8));
+    ctx.fillStyle = C.brass; ctx.fillRect(W / 2 - lw / 2, y + 115 * s, lw, 3 * s);
+    rich('Property. Business. People.', W / 2, y + 190 * s, { size: 40 * s, fam: 'sans', weight: 600, color: C.dim, stagger: .2 }, t - 1.5);
+    rich('*How I see things.*', W / 2, y + 290 * s, { size: 64 * s, italic: true }, t - 2.8);
+  } };
+}
+
+function MathsFinance(dur) {
+  return { dur, draw(t) {
+    eyebrow('How my brain works', t);
+    const cw = (portrait ? 400 : 420) * s, ch = (portrait ? 330 : 420) * s;
+    const gap = portrait ? 50 * s : 120 * s;
+    const pos = portrait
+      ? [[W / 2 - cw / 2, H * .27], [W / 2 - cw / 2, H * .27 + ch + gap]]
+      : [[W / 2 - cw - gap / 2, H * .24], [W / 2 + gap / 2, H * .24]];
+    const cards = [
+      { sub: 'Maths', grade: 'F', note: 'Just numbers', col: C.red, at: .4, stamp: 'FAILED' },
+      { sub: 'Finance', grade: 'A', note: 'Numbers with a story', col: C.brass, at: 2.2, stamp: 'TOP GRADE' },
+    ];
+    cards.forEach((c, i) => {
+      const p = eback(seg(t, c.at, c.at + .6));
+      if (p <= 0) return;
+      const [x, y] = pos[i];
+      ctx.save(); ctx.globalAlpha = clamp(p); ctx.translate(x + cw / 2, y + ch / 2 + (1 - p) * 60 * s); ctx.rotate((i ? 2 : -2) * Math.PI / 180);
+      ctx.fillStyle = C.paper; rrect(-cw / 2, -ch / 2, cw, ch, 10 * s); ctx.fill();
+      label(c.sub, 0, -ch / 2 + 50 * s, { color: C.ink, size: 26 * s });
+      ctx.font = font(portrait ? 170 * s : 220 * s, 'serif'); ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(c.grade, 0, 10 * s);
+      ctx.font = font(26 * s, 'sans', 400); ctx.fillStyle = '#5c5850'; ctx.fillText(c.note, 0, ch / 2 - 44 * s);
+      const sp = eback(seg(t, c.at + .7, c.at + 1.1));
+      if (sp > 0) {
+        ctx.save(); ctx.rotate(-14 * Math.PI / 180); ctx.scale(2 - sp, 2 - sp); ctx.globalAlpha = clamp(sp) * .92;
+        ctx.strokeStyle = c.col; ctx.lineWidth = 5 * s; ctx.font = font(44 * s, 'sans', 800); ctx.letterSpacing = 4 * s + 'px';
+        const sw = ctx.measureText(c.stamp).width + 40 * s;
+        rrect(-sw / 2, -36 * s, sw, 72 * s, 8 * s); ctx.stroke(); ctx.fillStyle = c.col; ctx.fillText(c.stamp, 0, 2 * s);
+        ctx.restore();
+      }
+      ctx.restore();
+    });
+    const ty = portrait ? H * .83 : H * .83;
+    if (t > 4.6) rich('Same brain. Different *context.*', W / 2, ty, { size: 70 * s, alpha: 1 - seg(t, 8.6, 9) }, t - 4.6);
+    if (t > 9) rich('Give me a *story* or a *picture* — and I see everything.', W / 2, ty, { size: 58 * s }, t - 9);
+  } };
+}
+
+function ContextIcons(dur) {
+  const items = [['book', 'Story'], ['eye', 'Visuals'], ['chart', 'Graphs'], ['map', 'Maps']];
+  return { dur, draw(t) {
+    rich('My brain runs on *context.*', W / 2, portrait ? H * .22 : H * .2, { size: 92 * s });
+    const cols = portrait ? 2 : 4, cell = portrait ? 400 * s : 380 * s;
+    items.forEach(([ic, name], i) => {
+      const cx = W / 2 + ((i % cols) - (cols - 1) / 2) * cell;
+      const cy = (portrait ? H * .46 : H * .55) + Math.floor(i / cols) * cell * 1.05;
+      const p = eback(seg(t, .8 + i * .45, 1.4 + i * .45));
+      if (p <= 0) return;
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(p, p);
+      iconBadge(ic, 0, 0, 110 * s, clamp(p));
+      ctx.restore();
+      label(name, cx, cy + 160 * s, { alpha: clamp(p), color: C.paper, size: 30 * s });
+    });
+    if (t > 3.6) rich('Not just words on a page.', W / 2, portrait ? H * .9 : H * .87, { size: 40 * s, fam: 'sans', weight: 400, color: C.dim }, t - 3.6);
+  } };
+}
+
+function Fundamentals(dur) {
+  const items = [
+    ['drop', 'The water', 'Location', C.sea],
+    ['rice', 'The rice', 'Infrastructure', C.paper],
+    ['wheat', 'The staple', 'Scarcity', C.brass],
+  ];
+  return { dur, draw(t) {
+    eyebrow('The fundamentals', t);
+    rich('Before the hype — the *basics.*', W / 2, portrait ? H * .28 : H * .26, { size: 84 * s }, t - .2);
+    const cell = portrait ? 330 * s : 480 * s;
+    items.forEach(([ic, a, b, col], i) => {
+      const cx = W / 2 + (i - 1) * cell, cy = portrait ? H * .5 : H * .55;
+      const p = eback(seg(t, 1.2 + i * .6, 1.8 + i * .6));
+      if (p <= 0) return;
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(p, p); iconBadge(ic, 0, 0, (portrait ? 110 : 120) * s, clamp(p), col); ctx.restore();
+      const flip = seg(t, 5 + i * .4, 5.5 + i * .4);
+      const ly = cy + (portrait ? 170 : 185) * s;
+      if (flip < 1) rich(a, cx, ly - flip * 30 * s, { size: (portrait ? 44 : 50) * s, maxW: cell * .95, alpha: clamp(p) * (1 - flip) });
+      if (flip > 0) {
+        rich(b, cx, ly + (1 - eo(flip)) * 30 * s, { size: (portrait ? 30 : 38) * s, fam: 'sans', weight: 800, color: col, alpha: eo(flip), maxW: cell * .95 });
+      }
+    });
+    if (t > 8) rich('Get these right. Everything else is _seasoning._', W / 2, portrait ? H * .78 : H * .84, { size: 58 * s }, t - 8);
+  } };
+}
+
+function SeenIt(dur) {
+  const items = [['news', 'You’ve seen the news.'], ['play', 'You’ve seen the content.'], ['chart', 'You’ve reviewed the numbers.']];
+  return { dur, draw(t) {
+    const step = 1.6;
+    items.forEach(([ic, txt], i) => {
+      const a = eo(seg(t, i * step, i * step + .4)) * (1 - seg(t, 5.3, 5.6));
+      if (a <= 0) return;
+      const y = (portrait ? H * .32 : H * .3) + i * (portrait ? 190 : 170) * s;
+      const dim = t > (i + 1) * step && i < 2 ? .45 : 1;
+      if (portrait) {
+        iconBadge(ic, W / 2, y - 60 * s, 50 * s, a * dim);
+        rich(txt, W / 2, y + 30 * s, { size: 54 * s, alpha: a * dim }, t - i * step);
+      } else {
+        const tw = textW(txt, 68 * s, 'serif');
+        iconBadge(ic, W / 2 - tw / 2 - 70 * s, y, 50 * s, a * dim);
+        rich(txt, W / 2 + 30 * s, y, { size: 68 * s, alpha: a * dim }, t - i * step);
+      }
+    });
+    if (t > 5.6) rich('Now let me show you *how I see it.*', W / 2, H * .5, { size: 100 * s }, t - 5.6);
+  } };
+}
+
+const ASSETS = [
+  ['dome', 'Louvre Abu Dhabi', 'Open now'],
+  ['museum', 'Guggenheim Abu Dhabi', 'Cultural District'],
+  ['museum', 'Zayed National Museum', 'Cultural District'],
+  ['beach', '#19 beach in the world', 'Crisp blue water'],
+  ['hotel', 'A top-3 luxury hotel brand', 'In negotiation'],
+  ['rail', 'Etihad Rail', 'Connecting the UAE'],
+  ['bank', 'BlackRock · J.P. Morgan · family offices', 'Global capital'],
+];
+
+function globeLayout(big) {
+  if (portrait) return { cx: W / 2, cy: H * (big ? .37 : .33), R: W * (big ? .42 : .4) };
+  return { cx: W * (big ? .36 : .3), cy: H * .54, R: H * (big ? .4 : .37) };
+}
+
+function GlobeAssets(dur, o = {}) {
+  const per = o.per ?? 1.5;
+  return { dur, draw(t, T) {
+    const g = globeLayout(false);
+    const from = [10, 20], to = PLACES.abudhabi.c;
+    const p = eio(seg(t, 0, 3));
+    const c = d3.geoInterpolate(from, to)(p);
+    const R = g.R * (.85 + .15 * eo(seg(t, 0, 3)));
+    const proj = globe(g.cx, g.cy, R, c);
+    const [px, py] = proj(to);
+    const pa = eo(seg(t, 2.6, 3.2));
+    pin(px, py, T, pa);
+    if (pa > 0) pinLabel('Saadiyat Island, Abu Dhabi', px, py, pa);
+    // list
+    const lx = portrait ? W * .08 : W * .58, ly0 = portrait ? H * .56 : H * .2;
+    const rowH = (portrait ? 86 : 96) * s;
+    if (!portrait) label('What’s here — and coming', lx, ly0 - 40 * s, { align: 'left', alpha: eo(seg(t, 3, 3.5)) });
+    ASSETS.forEach(([ic, name, sub], i) => {
+      const at = 3.4 + i * per, a = eo(seg(t, at, at + .5));
+      if (a <= 0) return;
+      const y = ly0 + 20 * s + i * rowH, x = lx + (1 - a) * 60 * s;
+      iconBadge(ic, x + 34 * s, y, 34 * s, a);
+      ctx.save(); ctx.globalAlpha = a; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.font = font((portrait ? 30 : 32) * s, 'sans', 600); ctx.fillStyle = C.paper;
+      ctx.fillText(name, x + 86 * s, y + 2 * s);
+      ctx.font = font(22 * s, 'sans', 400); ctx.fillStyle = C.mute; ctx.fillText(sub, x + 86 * s, y + 30 * s);
+      ctx.restore();
+      // a line from pin to badge as each lands
+      const lp = seg(t, at, at + .5) * (1 - seg(t, at + .8, at + 1.2));
+      if (lp > 0) {
+        ctx.save(); ctx.strokeStyle = C.brass; ctx.globalAlpha = lp * .6; ctx.lineWidth = 1.5 * s; ctx.setLineDash([6 * s, 6 * s]);
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x + 34 * s, y); ctx.stroke(); ctx.restore();
+      }
+    });
+    if (o.caption && t > dur - 3) rich(o.caption, W / 2, portrait ? H * .2 : H * .1, { size: 54 * s }, t - (dur - 3));
+  } };
+}
+
+const MOVES = [
+  ['hatfield', 'Would prices go up?'],
+  ['newcastle', 'Would demand go up?'],
+  ['paris', 'Would the world fly in?'],
+  ['madrid', 'Would capital follow?'],
+  ['california', 'Would rents move?'],
+  ['bahrain', 'Would the region change?'],
+];
+
+function GlobeMove(dur, o = {}) {
+  const intro = o.intro ?? 2.8, moves = o.moves || MOVES;
+  const per = (dur - intro) / moves.length;
+  return { dur, draw(t, T) {
+    const g = globeLayout(true);
+    let i = Math.floor((t - intro) / per);
+    i = clamp(i, -1, moves.length - 1);
+    const lt = t - intro - i * per;
+    const prev = i <= 0 ? PLACES.abudhabi.c : PLACES[moves[i - 1][0]].c;
+    const target = i < 0 ? PLACES.abudhabi.c : PLACES[moves[i][0]].c;
+    const fp = i < 0 ? 0 : eio(seg(lt, 0, per * .32));
+    const c = d3.geoInterpolate(prev, target)(fp);
+    const dist = d3.geoDistance(prev, target);
+    const R = g.R * (1 - Math.sin(fp * Math.PI) * clamp(dist, 0, 1.6) * .22);
+    const proj = globe(g.cx, g.cy, R, c);
+
+    if (t < intro + .3) {
+      const [px, py] = proj(PLACES.abudhabi.c);
+      pin(px, py, T, 1 - seg(t, intro - .4, intro));
+      rich('Now… what if I *moved* it?', W / 2, portrait ? H * .16 : H * .12, { size: (portrait ? 70 : 84) * s, alpha: 1 - seg(t, intro, intro + .3) }, t);
+      return;
+    }
+    const key = moves[i][0], q = moves[i][1], place = PLACES[key];
+    const [px, py] = proj(place.c);
+    const arrive = seg(lt, per * .3, per * .4);
+    if (visible(proj, place.c)) {
+      // icons flying into a ring around the pin
+      const ringR = (portrait ? 95 : 110) * s;
+      ASSETS.forEach(([ic], k) => {
+        const at = per * .32 + k * .09, p = eo(seg(lt, at, at + .45));
+        if (p <= 0) return;
+        const ang = -Math.PI / 2 + k * Math.PI * 2 / ASSETS.length + T * .25;
+        const sx = portrait ? W / 2 : W * .95, sy = portrait ? H : H * .2;
+        const ex = px + Math.cos(ang) * ringR, ey = py + Math.sin(ang) * ringR;
+        const x = lerp(sx, ex, p), y = lerp(sy, ey, p) - Math.sin(p * Math.PI) * 120 * s;
+        iconBadge(ic, x, y, 26 * s, p);
+      });
+      pin(px, py, T, arrive);
+    }
+    // city card
+    const ca = eo(seg(lt, per * .4, per * .52)) * (1 - seg(lt, per - .25, per));
+    if (ca > 0) {
+      const cw = (portrait ? W * .86 : W * .36), chh = (portrait ? 480 : 560) * s;
+      const cx = portrait ? W / 2 - cw / 2 : W * .6, cy = portrait ? H * .61 : H * .2;
+      ctx.save(); ctx.globalAlpha = ca; ctx.translate(0, (1 - ca) * 30 * s);
+      ctx.fillStyle = 'rgba(27,26,24,0.92)'; ctx.strokeStyle = 'rgba(194,166,126,0.35)'; ctx.lineWidth = 1.5 * s;
+      rrect(cx, cy, cw, chh, 12 * s); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      label(`What if — 0${i + 1}`, cx + 36 * s, cy + 44 * s, { align: 'left', alpha: ca, size: 20 * s });
+      ctx.save(); ctx.globalAlpha = ca; ctx.font = font((portrait ? 54 : 60) * s, 'serif'); ctx.fillStyle = C.paper; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(place.name, cx + 36 * s, cy + 104 * s); ctx.restore();
+      // bars
+      const by = cy + chh - (portrait ? 70 : 90) * s, bmax = (portrait ? 160 : 270) * s, bw = (portrait ? 110 : 120) * s;
+      const b1x = cx + 50 * s, b2x = b1x + bw + 60 * s;
+      const grow = eo(seg(lt, per * .55, per * .85));
+      const h1 = bmax * .35, h2 = bmax * (.35 + .65 * grow);
+      ctx.save(); ctx.globalAlpha = ca;
+      ctx.fillStyle = '#3a352d'; ctx.fillRect(b1x, by - h1, bw, h1);
+      const bg = ctx.createLinearGradient(0, by - h2, 0, by); bg.addColorStop(0, C.brass); bg.addColorStop(1, C.brassDeep);
+      ctx.fillStyle = bg; ctx.fillRect(b2x, by - h2, bw, h2);
+      ctx.font = font(20 * s, 'sans', 600); ctx.fillStyle = C.mute; ctx.textAlign = 'center';
+      ctx.fillText('TODAY', b1x + bw / 2, by + 30 * s); ctx.fillStyle = C.brass; ctx.fillText('WITH ALL THIS?', b2x + bw / 2, by + 30 * s);
+      ctx.font = font(56 * s, 'serif'); ctx.fillStyle = C.paper; ctx.fillText('↑ ?', b2x + bw / 2, by - h2 - 34 * s);
+      ctx.restore();
+      // question
+      const qa = eo(seg(lt, per * .6, per * .72));
+      const qx = portrait ? cx + cw - 36 * s : cx + cw - 36 * s;
+      ctx.save();
+      rich(q, b2x + bw + 30 * s + (qx - b2x - bw - 30 * s) / 2, by - bmax * .55, { size: (portrait ? 40 : 46) * s, maxW: qx - b2x - bw - 50 * s, alpha: qa * ca }, lt - per * .6);
+      ctx.restore();
+      label('Illustrative', cx + cw - 36 * s, cy + 44 * s, { align: 'right', alpha: ca * .6, size: 16 * s, color: C.mute });
+    }
+  } };
+}
+
+function Already(dur) {
+  return { dur, draw(t, T) {
+    const g = globeLayout(true);
+    const from = PLACES.bahrain.c, to = PLACES.abudhabi.c;
+    const proj = globe(portrait ? g.cx : W / 2, portrait ? H * .6 : H * .62, (portrait ? g.R : H * .36), d3.geoInterpolate([-30, 40], to)(eio(seg(t, 0, 2))));
+    const [px, py] = proj(to);
+    ASSETS.forEach(([ic], k) => {
+      const p = eo(seg(t, 1.2 + k * .1, 1.8 + k * .1));
+      if (p <= 0) return;
+      const ang = -Math.PI / 2 + k * Math.PI * 2 / ASSETS.length + T * .2;
+      iconBadge(ic, px + Math.cos(ang) * 120 * s * p, py + Math.sin(ang) * 120 * s * p, 28 * s, p);
+    });
+    pin(px, py, T, eo(seg(t, 1.6, 2)));
+    rich('We don’t have to imagine.', W / 2, portrait ? H * .2 : H * .14, { size: (portrait ? 74 : 84) * s }, t - .2);
+    if (t > 2.6) rich('It’s already *here.*', W / 2, portrait ? H * .28 : H * .26, { size: (portrait ? 74 : 84) * s }, t - 2.6);
+  } };
+}
+
+function Beach(dur) {
+  return { dur, draw(t, T) {
+    // waves band
+    const top = portrait ? H * .62 : H * .66;
+    for (let k = 0; k < 7; k++) {
+      ctx.strokeStyle = `rgba(79,179,224,${.5 - k * .06})`; ctx.lineWidth = 2.5 * s;
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 8) {
+        const y = top + k * 34 * s + Math.sin(x / (120 * s) + T * 1.4 + k) * 9 * s;
+        x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.stroke();
+    }
+    eyebrow('The beach', t);
+    const n = Math.round(lerp(50, 19, eo(seg(t, .3, 2))));
+    ctx.save(); ctx.font = font((portrait ? 260 : 300) * s, 'serif'); ctx.fillStyle = C.brass; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.globalAlpha = eo(seg(t, .2, .6)) * (1 - seg(t, 4.6, 5));
+    ctx.fillText('#' + n, W / 2, H * (portrait ? .36 : .37)); ctx.restore();
+    if (t < 5) rich('best beach in the world.', W / 2, H * (portrait ? .5 : .55), { size: 60 * s, alpha: 1 - seg(t, 4.6, 5) }, t - 1.6);
+    if (t < 5) rich('Crisp _blue_ water.', W / 2, H * (portrait ? .56 : .63), { size: 40 * s, fam: 'sans', weight: 400, color: C.dim, alpha: 1 - seg(t, 4.6, 5) }, t - 2.6);
+    if (t > 5) {
+      // comparison table
+      const rows = ['Blue water', 'White sand', 'Luxury hotels', 'Museums next door', 'A cultural district'];
+      const tw = portrait ? W * .9 : W * .62, x0 = W / 2 - tw / 2, y0 = H * (portrait ? .27 : .22), rh = (portrait ? 76 : 72) * s;
+      const c1 = x0 + tw * .62, c2 = x0 + tw * .86;
+      const a = eo(seg(t, 5, 5.5)) * (1 - seg(t, dur - 4.4, dur - 4));
+      label('Other top beaches', c1, y0, { alpha: a, size: (portrait ? 16 : 18) * s, color: C.mute, spacing: 2 * s });
+      label('Saadiyat', c2, y0, { alpha: a, size: (portrait ? 16 : 18) * s, spacing: 2 * s });
+      rows.forEach((r, i) => {
+        const ra = eo(seg(t, 5.4 + i * .5, 5.8 + i * .5)) * a;
+        const y = y0 + (i + 1) * rh;
+        ctx.save(); ctx.globalAlpha = ra;
+        ctx.strokeStyle = 'rgba(242,239,233,0.1)'; ctx.beginPath(); ctx.moveTo(x0, y + rh / 2); ctx.lineTo(x0 + tw, y + rh / 2); ctx.stroke();
+        ctx.font = font((portrait ? 30 : 34) * s, 'sans', 600); ctx.fillStyle = C.paper; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(r, x0, y);
+        ctx.textAlign = 'center'; ctx.font = font(40 * s, 'sans', 800);
+        ctx.fillStyle = i < 3 ? C.dim : C.red; ctx.fillText(i < 3 ? '✓' : '✗', c1, y);
+        ctx.fillStyle = C.sea; ctx.fillText('✓', c2, y);
+        ctx.restore();
+      });
+    }
+    if (t > dur - 4) {
+      rich('That’s why it’s *#1* to me.', W / 2, H * (portrait ? .33 : .36), { size: 96 * s }, t - (dur - 4));
+      rich('Mo at Aldar made me see it this way.', W / 2, H * (portrait ? .43 : .5), { size: 34 * s, fam: 'sans', weight: 400, color: C.dim }, t - (dur - 2.8));
+    }
+  } };
+}
+
+function Scarcity(dur) {
+  return { dur, draw(t) {
+    eyebrow('Scarcity', t);
+    const n = Math.round(18000 * eo(seg(t, .3, 2.2)));
+    ctx.save(); ctx.font = font((portrait ? 150 : 170) * s, 'serif'); ctx.fillStyle = C.paper; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.globalAlpha = eo(seg(t, .2, .5));
+    ctx.fillText(n.toLocaleString('en-GB'), W / 2, H * (portrait ? .29 : .3)); ctx.restore();
+    rich('new homes planned.', W / 2, H * (portrait ? .36 : .41), { size: 46 * s, fam: 'sans', weight: 400, color: C.dim }, t - 1);
+    // dot grid: 180 dots, 1 dot = 100 homes
+    const cols = portrait ? 15 : 30, rows = 180 / cols, gap = (portrait ? 56 : 40) * s, r = (portrait ? 17 : 13) * s;
+    const gx = W / 2 - (cols - 1) * gap / 2, gy = H * (portrait ? .45 : .53);
+    const villas = new Set([3, 17, 26, 41, 55, 62, 78, 89, 97, 104, 118, 126, 133, 147, 152, 166, 175]);
+    const lit = seg(t, 4, 5.5);
+    for (let k = 0; k < 180; k++) {
+      const a = eo(seg(t, 1.2 + k * .01, 1.6 + k * .01));
+      const x = gx + (k % cols) * gap, y = gy + Math.floor(k / cols) * gap;
+      const v = villas.has(k);
+      ctx.globalAlpha = a * (v ? 1 : 1 - lit * .65);
+      ctx.fillStyle = v ? (lit > 0 ? C.brass : C.dim) : C.dim;
+      ctx.beginPath(); ctx.arc(x, y, r * (v ? 1 + lit * .35 : 1), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    const ly = gy + rows * gap + 10 * s;
+    label('1 dot = 100 homes', W / 2, ly, { alpha: eo(seg(t, 2, 2.5)) * .7, color: C.mute, size: 16 * s });
+    if (t > 4.2) rich('Fewer than *1,800* will be villas & mansions.', W / 2, ly + (portrait ? 110 : 80) * s, { size: (portrait ? 54 : 56) * s }, t - 4.2);
+    if (t > 8.5) {
+      ctx.fillStyle = 'rgba(17,17,17,0.9)'; ctx.globalAlpha = eo(seg(t, 8.5, 9)); ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+      const ps = (portrait ? 66 : 80) * s;
+      rich('The most premium land.', W / 2, H * .42, { size: ps }, t - 8.7);
+      rich('The most premium *location.*', W / 2, H * .42 + ps * 1.5, { size: ps }, t - 9.6);
+    }
+  } };
+}
+
+function AldarPlan(dur) {
+  return { dur, draw(t, T) {
+    eyebrow('Then the developer moved', t);
+    ctx.save(); ctx.font = font((portrait ? 110 : 130) * s, 'sans', 800); ctx.letterSpacing = 18 * s + 'px'; ctx.fillStyle = C.paper; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.globalAlpha = eo(seg(t, .3, .9)); ctx.fillText('ALDAR', W / 2 + 9 * s, H * (portrait ? .3 : .3)); ctx.restore();
+    rich('Government-backed. They never move like this.', W / 2, H * (portrait ? .37 : .41), { size: (portrait ? 34 : 38) * s, fam: 'sans', weight: 400, color: C.dim }, t - 1);
+    // 50/50 bar
+    const bw = portrait ? W * .84 : W * .6, bh = 90 * s, bx = W / 2 - bw / 2, by = H * (portrait ? .49 : .56);
+    const p = eio(seg(t, 2.4, 4));
+    ctx.save();
+    ctx.strokeStyle = 'rgba(242,239,233,0.3)'; ctx.lineWidth = 2 * s; rrect(bx, by, bw, bh, 8 * s); ctx.stroke();
+    ctx.fillStyle = C.brassDeep; ctx.fillRect(bx, by, bw / 2 * p, bh);
+    ctx.fillStyle = C.brass; ctx.fillRect(bx + bw / 2, by, bw / 2 * eio(seg(t, 3.4, 4.6)), bh);
+    ctx.font = font(48 * s, 'serif'); ctx.fillStyle = C.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.globalAlpha = seg(t, 3.6, 4); ctx.fillText('50%', bx + bw / 4, by + bh / 2);
+    ctx.globalAlpha = seg(t, 4.4, 4.8); ctx.fillText('50%', bx + bw * .75, by + bh / 2);
+    ctx.globalAlpha = 1; ctx.font = font(22 * s, 'sans', 600); ctx.fillStyle = C.dim;
+    ctx.globalAlpha = seg(t, 3.8, 4.2); ctx.fillText('DURING CONSTRUCTION', bx + bw / 4, by + bh + 34 * s);
+    ctx.globalAlpha = seg(t, 4.6, 5); ctx.fillText('ON HANDOVER', bx + bw * .75, by + bh + 34 * s);
+    ctx.restore();
+    // 5% chip
+    const ca = eback(seg(t, 5.2, 5.8));
+    if (ca > 0) {
+      const cx = bx + bw * .05, cy = by - 56 * s;
+      ctx.save(); ctx.translate(cx, cy); ctx.scale(ca, ca);
+      ctx.fillStyle = C.sea; rrect(-80 * s, -34 * s, 230 * s, 68 * s, 34 * s); ctx.fill();
+      ctx.fillStyle = C.ink; ctx.font = font(34 * s, 'sans', 800); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('5% down', 35 * s, 2 * s);
+      ctx.restore();
+      ctx.strokeStyle = C.sea; ctx.lineWidth = 2 * s; ctx.globalAlpha = clamp(ca);
+      ctx.beginPath(); ctx.moveTo(cx, cy + 34 * s); ctx.lineTo(cx, by); ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    if (t > 6.4) rich('+ waiver & strong incentives.', W / 2, by + bh + (portrait ? 110 : 100) * s, { size: 48 * s }, t - 6.4);
+    // projects
+    const chips = ['SEI Saadiyat', 'Saadiyat Grove — The Designer', 'Baccarat'];
+    const cy = H * (portrait ? .74 : .82);
+    let widths = chips.map(c => textW(c, 28 * s) + 50 * s);
+    const rowsArr = portrait ? [[0], [1], [2]] : [[0, 1, 2]];
+    rowsArr.forEach((row, ri) => {
+      const total = row.reduce((a, k) => a + widths[k], 0) + 24 * s * (row.length - 1);
+      let x = W / 2 - total / 2;
+      row.forEach(k => {
+        const a = eo(seg(t, 8.5 + k * .4, 9 + k * .4));
+        const y = cy + ri * 80 * s;
+        ctx.save(); ctx.globalAlpha = a;
+        ctx.strokeStyle = C.brass; ctx.lineWidth = 2 * s; rrect(x, y - 30 * s, widths[k], 60 * s, 30 * s); ctx.stroke();
+        ctx.fillStyle = C.paper; ctx.font = font(28 * s, 'sans', 600); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(chips[k], x + widths[k] / 2, y + 1 * s);
+        ctx.restore();
+        x += widths[k] + 24 * s;
+      });
+    });
+  } };
+}
+
+function Generational(dur) {
+  return { dur, draw(t) {
+    const y = H * (portrait ? .55 : .6);
+    const xs = [.2, .5, .8].map(f => W * (portrait ? lerp(.1, .9, (f - .2) / .6) : f));
+    const lp = eio(seg(t, 1, 3));
+    ctx.strokeStyle = C.brassDeep; ctx.lineWidth = 3 * s;
+    ctx.beginPath(); ctx.moveTo(xs[0], y); ctx.lineTo(lerp(xs[0], xs[2], lp), y); ctx.stroke();
+    ['You', 'Your kids', 'Their kids'].forEach((l, i) => {
+      const a = eback(seg(t, 1 + i * .8, 1.6 + i * .8));
+      if (a <= 0) return;
+      ctx.save(); ctx.translate(xs[i], y - 90 * s); ctx.scale(a, a); iconBadge('house', 0, 0, (60 + i * 12) * s, clamp(a)); ctx.restore();
+      label(l, xs[i], y + 50 * s, { alpha: clamp(a), color: C.paper, size: 24 * s });
+    });
+    rich('Real estate is *generational.*', W / 2, H * (portrait ? .3 : .27), { size: 100 * s }, t - .1);
+    if (t > 4) rich('Location. Infrastructure. Scarcity. That’s how I see it.', W / 2, H * (portrait ? .75 : .83), { size: 40 * s, fam: 'sans', weight: 400, color: C.dim }, t - 4);
+  } };
+}
+
+function CTA(dur, o = {}) {
+  return { dur, draw(t) {
+    const y = H * .42;
+    rich('Jamal Akim', W / 2, y, { size: (portrait ? 140 : 170) * s, stagger: .12 }, t);
+    const lw = W * (portrait ? .5 : .3) * eio(seg(t, .5, 1.3));
+    ctx.fillStyle = C.brass; ctx.fillRect(W / 2 - lw / 2, y + 100 * s, lw, 3 * s);
+    rich('Property. Business. People.', W / 2, y + 170 * s, { size: 38 * s, fam: 'sans', weight: 600, color: C.dim }, t - .9);
+    const msg = o.msg || (portrait ? 'Follow for more' : 'Subscribe for the full series');
+    const a = eo(seg(t, 1.8, 2.3));
+    const bw = textW(msg, 32 * s, 'sans', 800) + 80 * s;
+    ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = C.brass;
+    rrect(W / 2 - bw / 2, y + 260 * s, bw, 80 * s, 40 * s); ctx.fill();
+    ctx.fillStyle = C.ink; ctx.font = font(32 * s, 'sans', 800); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(msg, W / 2, y + 301 * s); ctx.restore();
+    if (o.disclaimer !== false) disclaimer(eo(seg(t, 1, 1.5)));
+  } };
+}
+
+// ---------- cuts ----------
+const HOOK = [
+  { t: 0, text: 'I’m dyslexic.' },
+  { t: 1.3, text: 'I can’t spell.' },
+  { t: 2.6, text: 'But I can *create.*' },
+  { t: 3.9, text: 'I can *build.*' },
+  { t: 5.1, text: 'I can *out-think.*' },
+  { t: 6.4, text: 'Try me.', size: 220, stagger: 0 },
+];
+const MOTIVATE = [
+  { t: 0, text: 'They called it a ~disorder.~' },
+  { t: 2.2, text: 'I call it an *advantage.*' },
+  { t: 4.4, text: 'ADHD means I…', size: 90 },
+  { t: 5.6, text: 'think *fast.*', size: 150 },
+  { t: 6.6, text: 'build *fast.*', size: 150 },
+  { t: 7.6, text: 'move *fast.*', size: 150 },
+  { t: 8.8, text: 'Dyslexia means I see the *picture*…', size: 96 },
+  { t: 11.4, text: '…when others only see the ~words.~', size: 96 },
+  { t: 14, text: 'I’m not broken.' },
+  { t: 15.8, text: 'I’m *built different.*', size: 150 },
+];
+const IDENTITY = [
+  { t: 0, text: 'I’m ADHD. I’m dyslexic.', size: 84 },
+  { t: 2.4, text: 'And yeah… I can do things most people can’t.', size: 62 },
+  { t: 5.2, text: 'Because I see things most people *don’t.*', size: 62 },
+  { t: 8.2, text: 'That’s not my weakness.', size: 84, keep: true },
+  { t: 10, text: 'That’s my *edge.*', size: 130, keep: true },
+];
+
+const CUTS = {
+  main: { w: 1920, h: 1080, scenes: () => [
+    Beats(HOOK, 8.4, { size: 150 }),
+    Stack(IDENTITY, 13.5, { eyebrow: 'How I’m wired' }),
+    Title(6.5),
+    MathsFinance(13.5),
+    ContextIcons(7.5),
+    Fundamentals(12.5),
+    SeenIt(9.5),
+    GlobeAssets(17),
+    GlobeMove(40),
+    Already(6.5),
+    Beach(17),
+    Scarcity(13.5),
+    AldarPlan(13.5),
+    Generational(8),
+    Beats(MOTIVATE, 18.5, { size: 120 }),
+    CTA(8),
+  ] },
+  hook: { w: 1080, h: 1920, scenes: () => [Beats(HOOK, 8.4, { size: 150, pScale: .85 }), CTA(2.6, { disclaimer: false, msg: 'Follow' })] },
+  motivate: { w: 1080, h: 1920, scenes: () => [Beats(MOTIVATE, 18.5, { size: 120, pScale: .85 }), CTA(3, { disclaimer: false })] },
+  whatif: { w: 1080, h: 1920, scenes: () => [
+    Beats([{ t: 0, text: 'What if I moved Abu Dhabi’s best address…', size: 96 }, { t: 2.4, text: '…to *your* city?', size: 140 }], 4.2),
+    GlobeAssets(11.5, { per: 1 }),
+    GlobeMove(26, { intro: 2, moves: MOVES.slice(0, 4).concat([MOVES[4]]) }),
+    Already(5.5),
+    Scarcity(12),
+    CTA(4, { msg: 'Follow for part 2' }),
+  ] },
+  identity: { w: 1080, h: 1920, scenes: () => [Stack(IDENTITY, 13.5, { eyebrow: 'How I’m wired' }), CTA(3, { disclaimer: false })] },
+};
+
+function setup(cut) {
+  CUT = cut;
+  const def = CUTS[cut];
+  canvas = document.getElementById('c');
+  W = canvas.width = def.w; H = canvas.height = def.h;
+  ctx = canvas.getContext('2d');
+  portrait = H > W;
+  s = Math.min(W, H) / 1080;
+  SCENES = def.scenes();
+  let acc = 0;
+  for (const sc of SCENES) { sc.start = acc; acc += sc.dur; }
+  DURATION = acc;
+  return DURATION;
+}
+
+function renderFrame(T) {
+  background(T);
+  const sc = SCENES.find(x => T >= x.start && T < x.start + x.dur) || SCENES[SCENES.length - 1];
+  const t = T - sc.start;
+  ctx.save();
+  sc.draw(t, T);
+  ctx.restore();
+  // scene transition: quick fade to ink at each boundary
+  const edge = Math.min(t, sc.dur - t);
+  if (edge < .2) { ctx.fillStyle = C.ink; ctx.globalAlpha = 1 - edge / .2; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+  vignette();
+  brandBug(Math.min(1, T / .8));
+}
+
+window.setup = setup; window.renderFrame = renderFrame;
+window.fontsReady = Promise.all([
+  document.fonts.load('40px "DM Serif Display"'), document.fonts.load('italic 40px "DM Serif Display"'),
+  document.fonts.load('400 40px Inter'), document.fonts.load('600 40px Inter'), document.fonts.load('800 40px Inter'),
+]);
+
+// interactive preview when opened in a browser
+if (!navigator.webdriver) {
+  window.fontsReady.then(() => {
+    const q = new URLSearchParams(location.search);
+    setup(q.get('cut') || 'main');
+    const t0 = performance.now() - (+q.get('t') || 0) * 1000;
+    const ui = document.getElementById('ui');
+    (function loop() {
+      const T = ((performance.now() - t0) / 1000) % DURATION;
+      renderFrame(T); ui.textContent = `${CUT}  ${T.toFixed(1)} / ${DURATION.toFixed(1)}s`;
+      requestAnimationFrame(loop);
+    })();
+  });
+}
+</script>
+</body>
+</html>
