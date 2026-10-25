@@ -1,5 +1,5 @@
 ---
-title: "Off-plan vs resale: why paying the developer more can cost you less"
+title: "Developer vs resale in Dubai and Abu Dhabi: why cheaper is costing you AED 2 million"
 slug: off-plan-vs-resale-day-one-cash
 metaDescription: "Why would anyone pay the developer AED 1.35m more than resale? Day-one cash, leverage and the four phases of price appreciation, with a worked Abu Dhabi example."
 category: Investment
@@ -14,13 +14,19 @@ faq:
     a: "Off-plan and construction, where buyers are mostly investors; completion, where leveraged mortgage buyers arrive; and maturity, where end users who want to live there drive demand."
 ---
 
-Look, I know what you're thinking.
+Most people lose money in property before they even get the keys.
 
-*"Why would I pay the developer 1.35 million more when I can grab the same unit on resale for cheaper?"*
+Not because they bought the wrong building. Because they bought the right building the wrong way.
 
-On paper, it makes zero sense. In reality, it is all about leverage, and who you are actually going to sell to.
+Here is the question I get asked every single week:
 
-Let me break it down with a real-world style example from Abu Dhabi.
+*"Jamal, why would I pay the developer 1.35 million more when I can grab the same unit on resale for cheaper?"*
+
+On paper, it makes zero sense. Cheaper is cheaper. Right?
+
+Wrong. Cheaper on the sticker is not cheaper in your bank account. And in off-plan, your bank account is the only number that matters on day one.
+
+Let me show you, with a real-world style example from Abu Dhabi.
 
 ## Same unit, three prices
 
@@ -159,6 +165,10 @@ In the UAE, off-plan payments go into a regulated **escrow account** linked to t
 If you can answer all five with numbers, you are investing. If not, you are hoping.
 
 ## My take
+
+If you remember one word from this article, make it **leverage**.
+
+It is not about the headline price. It is about how much cash you need today versus how much the market is willing to pay you tomorrow.
 
 The cheapest price is not always the cheapest deal. In off-plan, cash today, time and the buyer you will sell to matter more than the number on the brochure.
 
