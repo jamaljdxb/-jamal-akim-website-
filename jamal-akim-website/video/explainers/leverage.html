@@ -74,7 +74,7 @@ function chrome(T, i) {
   font(600, capSize); const words = cap.split(' '); const lines = []; let cur = '';
   for (const w of words) { const t2 = cur ? cur + ' ' + w : w; if (ctx.measureText(t2).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t2; }
   lines.push(cur);
-  const a = eo(seg(lt, .05, .35)) * (1 - seg(lt, D[i] - .25, D[i]));
+  const a = i === VO.length - 1 ? 0 : eo(seg(lt, .05, .35)) * (1 - seg(lt, D[i] - .25, D[i]));
   lines.forEach((l, k) => text(l, W / 2, py - 30 * s - (lines.length - 1 - k) * capSize * 1.3, { size: capSize, w: 700, color: P.grey, align: 'center', alpha: a }));
 }
 
@@ -198,7 +198,7 @@ function scene(i, lt) {
       const sz = (mode === 'h' ? 92 : 96) * s;
       words.forEach((w, k) => rise(w, pad, top + k * sz * 1.08, sz, lt - k * .45, { color: k === 3 ? P.brass2 : P.white }));
       const a = eo(seg(lt, 2.4, 3));
-      const yb = mode === 'v' ? H * .70 : H * .78;
+      const yb = mode === 'v' ? H * .70 : H * .70;
       text('Full breakdown', pad, yb, { size: 24 * s, m: true, color: P.grey, alpha: a });
       text('jamalakim.com', pad, yb + 70 * s, { size: 64 * s, color: P.white, alpha: a });
       text('Illustrative Abu Dhabi example · Not financial advice', pad, yb + 120 * s, { size: 16 * s, m: true, color: P.grey, alpha: a });
