@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Reel Overlay</title>
+<style>
+  @font-face{font-family:"Inter Tight";src:url(../assets/fonts/inter-tight-latin-800-normal.woff2);font-weight:800}
+  @font-face{font-family:"Inter Tight";src:url(../assets/fonts/inter-tight-latin-700-normal.woff2);font-weight:700}
+  @font-face{font-family:"Instrument Serif";src:url(../assets/fonts/instrument-serif-latin-400-italic.woff2);font-style:italic}
+  @font-face{font-family:"IBM Plex Mono";src:url(../assets/fonts/ibm-plex-mono-latin-500-normal.woff2);font-weight:500}
+  html,body{margin:0;background:transparent}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// Transparent typography layer for the real-footage reel. render.js-style contract:
+// setup(mode) -> duration, renderFrame(t). mode 'v' = 1080x1920 over full footage,
+// 'h' = 1920x1080 with a paper text panel on the left and footage on the right.
+const P = { paper: '#ECE8DF', ink: '#0E0E0E', blue: '#2B3DF5', orange: '#FF5A1F' };
+// shot boundaries must match build.sh
+const SHOTS = [
+  { end: 2.9, lines: ['Property.'] },
+  { end: 6.0, lines: ['Business.'] },
+  { end: 10.4, lines: ['People.'] },
+  { end: 13.2, lines: ['Numbers are', '_vital_.'] },
+  { end: 16.4, lines: ['Context is', 'my *edge*.'] },
+];
+const END = 19;
+let c, ctx, W, H, s, mode;
+
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = x => 1 - Math.pow(1 - x, 3);
+const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+
+function setFont(k, size) {
+  if (k === 's') { ctx.font = `italic ${size * 1.14}px "Instrument Serif"`; ctx.letterSpacing = '0px'; }
+  else if (k === 'mono') { ctx.font = `500 ${size}px "IBM Plex Mono"`; ctx.letterSpacing = `${size * .08}px`; }
+  else { ctx.font = `800 ${size}px "Inter Tight"`; ctx.letterSpacing = `${-0.035 * size}px`; }
+}
+function parse(str) {
+  const out = [], re = /(\*[^*]+\*|_[^_]+_)/g; let last = 0, m;
+  while ((m = re.exec(str))) { if (m.index > last) out.push({ t: str.slice(last, m.index), k: 'h' }); out.push({ t: m[0].slice(1, -1), k: m[0][0] === '*' ? 's' : 'm' }); last = m.index + m[0].length; }
+  if (last < str.length) out.push({ t: str.slice(last), k: 'h' });
+  return out;
+}
+// masked headline, bottom anchored at y
+function headline(lines, x, y, size, t, out, color = P.paper, acc = P.paper) {
+  const lh = size;
+  lines.forEach((line, i) => {
+    const p = eo(seg(t, i * .1, i * .1 + .5)), ly = y - (lines.length - i) * lh;
+    ctx.save(); ctx.beginPath(); ctx.rect(0, ly - lh * .08, W, lh * 1.16); ctx.clip();
+    const base = ly + size * .84 + (1 - p) * lh * 1.05 - out * lh * 1.15;
+    let lx = x;
+    for (const g of parse(line)) {
+      setFont(g.k, size); const w = ctx.measureText(g.t).width;
+      if (g.k === 'm') { ctx.fillStyle = P.orange; ctx.fillRect(lx - size * .05, base - size * .74, (w + size * .1) * eo(seg(t, i * .1 + .35, i * .1 + .8)), size * .86); }
+      ctx.fillStyle = g.k === 'm' ? P.ink : g.k === 's' ? acc : color;
+      ctx.fillText(g.t, lx, base); lx += w;
+    }
+    ctx.restore();
+  });
+}
+function mono(txt, x, y, size, color, align = 'left', alpha = 1) {
+  ctx.save(); setFont('mono', size); ctx.fillStyle = color; ctx.globalAlpha = alpha; ctx.textAlign = align; ctx.textBaseline = 'middle';
+  ctx.fillText(txt.toUpperCase(), x, y); ctx.restore();
+}
+
+function setup(m) {
+  mode = m; c = document.getElementById('c');
+  W = c.width = m === 'v' ? 1080 : 1920; H = c.height = m === 'v' ? 1920 : 1080;
+  ctx = c.getContext('2d'); s = Math.min(W, H) / 1080;
+  return END;
+}
+
+function renderFrame(T) {
+  ctx.clearRect(0, 0, W, H);
+  const last = SHOTS[SHOTS.length - 1].end;
+  if (T >= last) return endCard(T - last);
+  const i = SHOTS.findIndex(x => T < x.end), shot = SHOTS[i], start = i ? SHOTS[i - 1].end : 0, lt = T - start;
+  const out = eio(seg(T, shot.end - .22, shot.end));
+  if (mode === 'v') {
+    // legibility gradient at the bottom
+    const g = ctx.createLinearGradient(0, H * .55, 0, H); g.addColorStop(0, 'rgba(14,14,14,0)'); g.addColorStop(1, 'rgba(14,14,14,.72)');
+    ctx.fillStyle = g; ctx.fillRect(0, H * .55, W, H * .45);
+    mono('Jamal Akim', 80, 150, 22, P.paper);
+    mono(`0${i + 1} / 05`, W - 80, 150, 22, P.paper, 'right');
+    headline(shot.lines, 80, H * .8, 170, lt, out, P.paper, P.paper);
+  } else {
+    ctx.fillStyle = P.paper; ctx.fillRect(0, 0, W * .56, H);
+    ctx.fillStyle = P.orange; ctx.fillRect(W * .56 - 14, 0, 14, H);
+    mono('Jamal Akim', 100, 80, 20, P.ink);
+    mono(`0${i + 1} / 05`, W * .56 - 60, 80, 20, P.ink, 'right');
+    headline(shot.lines, 100, H * .72, 190, lt, out, P.ink, P.blue);
+    mono('Property · Business · People', 100, H - 80, 18, '#6F6B63');
+  }
+  // orange flash bar on each cut
+  const cut = seg(lt, 0, .18);
+  if (i > 0 && cut < 1) { ctx.fillStyle = P.orange; ctx.fillRect(0, 0, W * (1 - eo(cut)), H); }
+}
+
+function endCard(t) {
+  ctx.fillStyle = P.blue; ctx.fillRect(0, 0, W * eio(seg(t, 0, .3)), H);
+  if (t < .2) return;
+  const lt = t - .2, size = mode === 'v' ? 260 : 300;
+  headline(['Jamal', 'Akim'], mode === 'v' ? 80 : 110, mode === 'v' ? H * .52 : H * .64, size * .9, lt, 0);
+  mono('Property · Business · People', mode === 'v' ? 80 : 110, mode === 'v' ? H * .58 : H * .74, 22, P.paper, 'left', eo(seg(lt, .5, .9)));
+  const a = eo(seg(lt, .8, 1.2));
+  ctx.save(); ctx.globalAlpha = a; setFont('h', 48);
+  const msg = 'Follow', bw = ctx.measureText(msg).width + 90, bx = mode === 'v' ? 80 : W - 110 - bw, by = mode === 'v' ? H * .63 : H * .66;
+  ctx.fillStyle = P.paper; ctx.fillRect(bx, by, bw, 100); ctx.fillStyle = P.blue; ctx.textBaseline = 'middle'; ctx.fillText(msg, bx + 45, by + 52);
+  ctx.restore();
+}
+
+window.setup = setup; window.renderFrame = renderFrame;
+window.fontsReady = Promise.all([
+  document.fonts.load('800 40px "Inter Tight"'), document.fonts.load('italic 40px "Instrument Serif"'), document.fonts.load('500 40px "IBM Plex Mono"'),
+]);
+</script>
+</body>
+</html>
